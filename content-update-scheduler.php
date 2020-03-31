@@ -316,8 +316,7 @@ class ContentUpdateScheduler {
 		echo '<style> #duplicate-action, #delete-action, #minor-publishing-actions, #misc-publishing-actions, #preview-action {display:none;} </style>'; // WPCS: XSS okay.
 
 		wp_enqueue_script( 'jquery-ui-datepicker' );
-		$url = '//ajax.googleapis.com/ajax/libs/jqueryui/1.10.3/themes/blitzer/jquery-ui.min.css';
-		wp_enqueue_style( 'jquery-ui-blitzer', $url );
+		wp_enqueue_style( 'jquery-ui-blitzer', plugin_dir_url( __FILE__ ) . 'jquery-ui.min.css' );
 		wp_enqueue_script( self::$_cus_publish_status . '-datepicker.js', plugins_url( 'js/publish-datepicker.js', __FILE__ ), array( 'jquery-ui-datepicker' ) );
 
 		$months = array();
