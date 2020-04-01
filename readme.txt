@@ -1,8 +1,8 @@
 === Content Update Scheduler ===
 Contributors: infinitnet
-Tags: publishing, cron, schedule, timing, scheduler, content, update, publish, time, publication, date
+Tags: schedule, timing, scheduler, content, update, publish, time, publication
 Requires at least: 3.7.0
-Tested up to: 5.3.2
+Tested up to: 5.4
 Stable tag: 1.0
 Requires PHP: 5.3
 License: GPLv3
@@ -40,13 +40,13 @@ Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned plu
 
 == Frequently Asked Questions ==
 
-= How to I schedule a content update? =
+= How do I schedule a content update? =
 
-Each page and post has a 'Scheduled Content Update' link where you can schedule the content updates. Click on it. Then select the date and time and then save as draft.
+Each page and post has a 'Scheduled Content Update' link in overview where you can schedule the content updates. Click on it. Then select date and time of the update and save as draft (do not click publish).
 
 = Does this work with page builders? =
 
-Yes, it has been tested with Elementor and Oxygen Builder. Might work with other page builders as well.
+Yes, it has been tested with Elementor and Oxygen Builder. It may work with other page builders as well.
 
 == Changelog ==
 
