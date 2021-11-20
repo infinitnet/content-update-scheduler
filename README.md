@@ -2,6 +2,7 @@
 WordPress plugin to schedule content updates for any page or post type.
 
 ## Description
+**IMPORTANT NOTICE:** Development of this plugin has been ceased because the plugin [Yoast Duplicate Post can now do the same](https://yoast.com/wordpress/plugins/duplicate-post/#:~:text=New%3A%20Rewrite%20%26%20Republish,never%20been%20easier!) ("Rewrite & Republish" feature). If anyone wants to take over development of this plugin regardless, please contact me.
 WordPress lacks a feature to schedule content updates. Keeping your posts and pages up to date manually can often waste your precious time, especially when you already know you'll soon have to update the same page again.
 
 ## Use Cases
