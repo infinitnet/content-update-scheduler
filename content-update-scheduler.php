@@ -507,11 +507,11 @@ class ContentUpdateScheduler {
 			add_action( 'save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2 );
 		} elseif ( 'trash' === $new_status ) {
 			wp_clear_scheduled_hook( 'cus_publish_post', array(
-				'ID' => $post->ID,
+                $post->ID,
 			) );
 		} elseif ( 'trash' === $old_status && $new_status === self::$_cus_publish_status ) {
 			wp_schedule_single_event( get_post_meta( $post->ID, self::$_cus_publish_status . '_pubdate', true ), 'cus_publish_post', array(
-				'ID' => $post->ID,
+                $post->ID,
 			) );
 		}
 	}
@@ -698,12 +698,12 @@ class ContentUpdateScheduler {
 				}
 
 				wp_clear_scheduled_hook( 'cus_publish_post', array(
-					'ID' => $post_id,
+                    $post_id,
 				) );
 				if ( ! $stampchange || ContentUpdateScheduler_Options::get( 'tsu_nodate' ) === 'publish' ) {
 					update_post_meta( $post_id, $pub, $stamp );
 					wp_schedule_single_event( $stamp, 'cus_publish_post', array(
-						'ID' => $post_id,
+                        $post_id,
 					) );
 				}
 			}
