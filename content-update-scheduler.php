@@ -170,15 +170,15 @@ class ContentUpdateScheduler {
 	 * @global $post
 	 */
 	public static function display_post_states( $states ) {
-		global $post;
+        global $post;
 
         if (!$post instanceof WP_Post) {
             return $states;
         }
 
-        $arg = get_query_var( 'post_status' );
-		$the_post_types = self::get_post_types();
-		// default states for non-public posts.
+        $arg = get_query_var('post_status');
+        $the_post_types = self::get_post_types();
+        // default states for non-public posts.
 		if ( ! isset( $the_post_types[ $post->post_type ] ) ) {
 			return $states;
 		}
