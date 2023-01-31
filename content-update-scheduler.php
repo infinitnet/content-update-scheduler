@@ -927,6 +927,10 @@ class ContentUpdateScheduler {
 	{
 		//ini_set('memory_limit', '256M');
 		global $post;
+
+		if (!$post instanceof WP_Post) {
+			return;
+		}
 		
 		if(!current_user_can('administrator')){
 			$cus_sc_publish_pubdate = get_post_meta($post->ID, 'cus_sc_publish_pubdate', true);
