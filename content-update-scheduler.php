@@ -171,9 +171,14 @@ class ContentUpdateScheduler {
 	 */
 	public static function display_post_states( $states ) {
 		global $post;
-		$arg = get_query_var( 'post_status' );
+
+		if (!$post instanceof WP_Post) {
+			return $states;
+		}
+
+		$arg = get_query_var('post_status');
 		$the_post_types = self::get_post_types();
-		// default states for non public posts.
+		// default states for non-public posts.
 		if ( ! isset( $the_post_types[ $post->post_type ] ) ) {
 			return $states;
 		}
@@ -507,11 +512,11 @@ class ContentUpdateScheduler {
 			add_action( 'save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2 );
 		} elseif ( 'trash' === $new_status ) {
 			wp_clear_scheduled_hook( 'cus_publish_post', array(
-				'ID' => $post->ID,
+                $post->ID,
 			) );
 		} elseif ( 'trash' === $old_status && $new_status === self::$_cus_publish_status ) {
 			wp_schedule_single_event( get_post_meta( $post->ID, self::$_cus_publish_status . '_pubdate', true ), 'cus_publish_post', array(
-				'ID' => $post->ID,
+                $post->ID,
 			) );
 		}
 	}
@@ -698,12 +703,12 @@ class ContentUpdateScheduler {
 				}
 
 				wp_clear_scheduled_hook( 'cus_publish_post', array(
-					'ID' => $post_id,
+                    $post_id,
 				) );
 				if ( ! $stampchange || ContentUpdateScheduler_Options::get( 'tsu_nodate' ) === 'publish' ) {
 					update_post_meta( $post_id, $pub, $stamp );
 					wp_schedule_single_event( $stamp, 'cus_publish_post', array(
-						'ID' => $post_id,
+                        $post_id,
 					) );
 				}
 			}
@@ -818,13 +823,13 @@ class ContentUpdateScheduler {
 	 * Wrapper function for cron automated publishing
 	 * disables the kses filters before and reenables them after the post has been published
 	 *
-	 * @param int $post_id the post's id.
+	 * @param int $ID the post's id.
 	 *
 	 * @return void
 	 */
-	public static function cron_publish_post( $post_id ) {
+	public static function cron_publish_post( $ID ) {
 		kses_remove_filters();
-		self::publish_post( $post_id );
+		self::publish_post( $ID );
 		kses_init_filters();
 	}
 
@@ -922,6 +927,10 @@ class ContentUpdateScheduler {
 	{
 		//ini_set('memory_limit', '256M');
 		global $post;
+
+		if (!$post instanceof WP_Post) {
+			return;
+		}
 		
 		if(!current_user_can('administrator')){
 			$cus_sc_publish_pubdate = get_post_meta($post->ID, 'cus_sc_publish_pubdate', true);
@@ -946,7 +955,7 @@ class ContentUpdateScheduler {
 }
 
 add_action( 'save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2 );
-add_action( 'cus_publish_post', array( 'ContentUpdateScheduler', 'cron_publish_post' ) );
+add_action( 'cus_publish_post', array( 'ContentUpdateScheduler', 'cron_publish_post' ), PHP_INT_MIN );
 
 add_action( 'wp_ajax_load_pubdate', array( 'ContentUpdateScheduler', 'load_pubdate' ) );
 add_action( 'init', array( 'ContentUpdateScheduler', 'init' ), PHP_INT_MAX );
