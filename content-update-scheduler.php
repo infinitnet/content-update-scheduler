@@ -43,7 +43,6 @@ class ContentUpdateScheduler
      */
     protected static $_cus_publish_status     = 'cus_sc_publish';
 
-
     /**
      * Initializes cus_publish_label and _cus_publish_metabox with their localized strings.
      *
@@ -94,7 +93,6 @@ class ContentUpdateScheduler
             'public' => true,
         ), 'objects');
     }
-
 
     /**
      * Displays a post's publishing date.
@@ -202,7 +200,6 @@ class ContentUpdateScheduler
         return $states;
     }
 
-
     /**
      * Adds links for scheduled updates.
      *
@@ -231,7 +228,6 @@ class ContentUpdateScheduler
         return $actions;
     }
 
-
     /**
      * Adds a column to the pages overview.
      *
@@ -250,7 +246,6 @@ class ContentUpdateScheduler
         }
         return $new;
     }
-
 
     /**
      * Manages the content of previously added custom columns.
@@ -272,7 +267,6 @@ class ContentUpdateScheduler
             }
         }
     }
-
 
     /**
      * Handles the admin action workflow_copy_to_publish.
@@ -306,12 +300,10 @@ class ContentUpdateScheduler
     {
         if (isset($_REQUEST['n'], $_REQUEST['post']) && wp_verify_nonce(sanitize_key($_REQUEST['n']), 'workflow_publish_now' . absint($_REQUEST['post']))) {
             $post = get_post(absint(wp_unslash($_REQUEST['post'])));
-            $msgid = $_GET['msgid'];
             self::publish_post($post->ID);
             wp_redirect(admin_url('edit.php?post_type=' . $post->post_type));
         }
     }
-
 
     /**
      * Adds the 'scheduled update'-metabox to the edit-page screen.
@@ -442,7 +434,6 @@ class ContentUpdateScheduler
             </p>
         <?php
     }
-
 
     /**
      * Gets the currently set timezone..
@@ -618,7 +609,6 @@ class ContentUpdateScheduler
             copy($dir, $chdir);
         }
 
-
         // copy meta and terms over to the new post.
         self::copy_meta_and_terms($post->ID, $new_post_id);
 
@@ -690,7 +680,6 @@ class ContentUpdateScheduler
             $what = wp_set_object_terms($destination_post->ID, $terms, $taxonomy);
         }
     }
-
 
     /**
      * Saves a post's publishing date.
@@ -854,7 +843,6 @@ class ContentUpdateScheduler
         self::publish_post($ID);
         kses_init_filters();
     }
-
 
     /**
      * Reformats a timestamp into human readable publishing date and time
