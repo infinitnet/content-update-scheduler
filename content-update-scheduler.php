@@ -376,13 +376,11 @@ class ContentUpdateScheduler
         $metaname = self::$_cus_publish_status . '_pubdate';
         $stamp = get_post_meta($post->ID, $metaname, true);
         $date = '';
-        $time = '';
         $offset = get_option('gmt_offset') * 3600;
         $dateo = new DateTime('now', self::get_timezone_object());
         if ($stamp) {
             $dateo->setTimestamp($stamp);
         }
-        $time = $dateo->format('H:i');
         $date = date_i18n(get_option('date_format'), $dateo->getTimestamp() + $offset);
         $date2 = $dateo->format('d.m.Y');
 
@@ -451,15 +449,12 @@ class ContentUpdateScheduler
         $current_offset = get_option('gmt_offset');
         $tzstring = get_option('timezone_string');
 
-        $check_zone_info = true;
-
         // Remove old Etc mappings. Fallback to gmt_offset.
         if (false !== strpos($tzstring, 'Etc/GMT')) {
             $tzstring = '';
         }
 
         if (empty($tzstring)) { // Create a UTC+- zone if no timezone string exists.
-            $check_zone_info = false;
             if (0 === $current_offset) {
                 $tzstring = 'UTC+0';
             } elseif ($current_offset < 0) {
@@ -515,7 +510,7 @@ class ContentUpdateScheduler
             remove_action('save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10);
 
             $post->post_status = self::$_cus_publish_status;
-            $u = wp_update_post($post, true);
+            wp_update_post($post, true);
 
             add_action('save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2);
         } elseif ('trash' === $new_status) {
@@ -677,7 +672,7 @@ class ContentUpdateScheduler
             // reset taxonomy to empty.
             wp_set_object_terms($destination_post->ID, null, $taxonomy);
             // then add new terms.
-            $what = wp_set_object_terms($destination_post->ID, $terms, $taxonomy);
+            wp_set_object_terms($destination_post->ID, $terms, $taxonomy);
         }
     }
 
