@@ -18,4 +18,4 @@ WordPress lacks a feature to schedule content updates. Keeping your posts and pa
 - Lightweight code
 
 ## Credits
-Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned plugin [tao-schedule-update](https://github.com/tao-software/tao-schedule-update). 
+Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned plugin [tao-schedule-update](https://github.com/tao-software/tao-schedule-update).
