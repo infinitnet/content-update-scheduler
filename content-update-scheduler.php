@@ -276,7 +276,7 @@ class ContentUpdateScheduler {
 				wp_redirect( admin_url( 'post.php?action=edit&post=' . $publishing_id ) );
 			} else {
 				// translators: %1$s: post type, %2$s: post title.
-				$html  = sprintf( __( 'Could not schedule %1$s %2$s', 'cus-scheduleupdate-td' ), $post->post_type, '<i>' . htmlspecialchars( $post->post_title ) . '</i>' );
+				$html  = sprintf( __( 'Could not schedule %1$s %2$s', 'cus-scheduleupdate-td' ), $post->post_type, '<i>' . htmlspecialchars( $post->post_title, ENT_COMPAT ) . '</i>' );
 				$html .= '<br><br>';
 				$html .= '<a href="' . esc_attr( admin_url( 'edit.php?post_type=' . $post->post_type ) ) . '">' . __( 'Back' ) . '</a>';
 				wp_die( $html ); // WPCS: XSS okay.
