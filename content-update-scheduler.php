@@ -25,7 +25,7 @@ class ContentUpdateScheduler {
 	 * @access public
 	 * @var string
 	 */
-	public static $cus_publish_label         = 'Scheduled Content Update';
+	public static $cus_publish_label = 'Scheduled Content Update';
 
 	/**
 	 * Title for the Publish Metabox
@@ -33,15 +33,15 @@ class ContentUpdateScheduler {
 	 * @access protected
 	 * @var string
 	 */
-	protected static $_cus_publish_metabox    = 'Scheduled Content Update';
+	protected static $_cus_publish_metabox = 'Scheduled Content Update';
 
 	/**
-	 * Status for wordpress posts
+	 * Status for WordPress posts
 	 *
 	 * @access protected
 	 * @var string
 	 */
-	protected static $_cus_publish_status     = 'cus_sc_publish';
+	protected static $_cus_publish_status = 'cus_sc_publish';
 
 
 	/**
@@ -53,14 +53,14 @@ class ContentUpdateScheduler {
 	 * @return void
 	 */
 	public static function init() {
-		require_once dirname( __FILE__ ) . '/options.php';
+		require_once __DIR__ . '/options.php';
 
 		self::load_plugin_textdomain();
-		self::$cus_publish_label   = __( 'Scheduled Content Update', 'cus-scheduleupdate-td' );
+		self::$cus_publish_label    = __( 'Scheduled Content Update', 'cus-scheduleupdate-td' );
 		self::$_cus_publish_metabox = __( 'Scheduled Content Update', 'cus-scheduleupdate-td' );
 		self::register_post_status();
 
-		$pt = ContentUpdateScheduler::get_post_types();
+		$pt = self::get_post_types();
 		foreach ( $pt as $type ) {
 			add_action( 'manage_edit-' . $type->name . '_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ) );
 			add_filter( 'manage_' . $type->name . '_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2 );
@@ -87,9 +87,12 @@ class ContentUpdateScheduler {
 	 * @return array Array of all registered post type as objects
 	 */
 	private static function get_post_types() {
-		return get_post_types( array(
-			'public' => true,
-		), 'objects' );
+		return get_post_types(
+			array(
+				'public' => true,
+			),
+			'objects'
+		);
 	}
 
 
@@ -171,7 +174,7 @@ class ContentUpdateScheduler {
 	 */
 	public static function display_post_states( $states ) {
 		global $post;
-		$arg = get_query_var( 'post_status' );
+		$arg            = get_query_var( 'post_status' );
 		$the_post_types = self::get_post_types();
 		// default states for non public posts.
 		if ( ! isset( $the_post_types[ $post->post_type ] ) ) {
@@ -205,9 +208,8 @@ class ContentUpdateScheduler {
 	public static function page_row_actions( $actions, $post ) {
 		$copy = '?action=workflow_copy_to_publish&post=' . $post->ID . '&n=' . wp_create_nonce( 'workflow_copy_to_publish' . $post->ID );
 		if ( $post->post_status === self::$_cus_publish_status ) {
-			
-			$action = '?action=workflow_publish_now&post=' . $post->ID . '&n=' . wp_create_nonce( 'workflow_publish_now' . $post->ID );
-			$actions['publish_now'] = '<a href="' . admin_url( 'admin.php' . $action ) . '">' . __( 'Publish Now', 'cus-scheduleupdate-td' ) . '</a>';
+			$action                     = '?action=workflow_publish_now&post=' . $post->ID . '&n=' . wp_create_nonce( 'workflow_publish_now' . $post->ID );
+			$actions['publish_now']     = '<a href="' . admin_url( 'admin.php' . $action ) . '">' . __( 'Publish Now', 'cus-scheduleupdate-td' ) . '</a>';
 			$actions['copy_to_publish'] = '<a href="' . admin_url( 'admin.php' . $copy ) . '">' . self::$cus_publish_label . '</a>';
 			if ( ContentUpdateScheduler_Options::get( 'tsu_recursive' ) ) {
 				$actions['copy_to_publish'] = '<a href="' . admin_url( 'admin.php' . $copy ) . '">' . __( 'Schedule recursive', 'cus-scheduleupdate-td' ) . '</a>';
@@ -268,7 +270,7 @@ class ContentUpdateScheduler {
 	 */
 	public static function admin_action_workflow_copy_to_publish() {
 		if ( isset( $_REQUEST['n'], $_REQUEST['post'] ) && wp_verify_nonce( sanitize_key( $_REQUEST['n'] ), 'workflow_copy_to_publish' . absint( $_REQUEST['post'] ) ) ) {
-			$post = get_post( absint( wp_unslash( $_REQUEST['post'] ) ) );
+			$post          = get_post( absint( wp_unslash( $_REQUEST['post'] ) ) );
 			$publishing_id = self::create_publishing_post( $post );
 			if ( $publishing_id ) {
 				wp_redirect( admin_url( 'post.php?action=edit&post=' . $publishing_id ) );
@@ -289,8 +291,8 @@ class ContentUpdateScheduler {
 	 */
 	public static function admin_action_workflow_publish_now() {
 		if ( isset( $_REQUEST['n'], $_REQUEST['post'] ) && wp_verify_nonce( sanitize_key( $_REQUEST['n'] ), 'workflow_publish_now' . absint( $_REQUEST['post'] ) ) ) {
-			$post = get_post( absint( wp_unslash( $_REQUEST['post'] ) ) );
-			$msgid = $_GET['msgid'];			
+			$post  = get_post( absint( wp_unslash( $_REQUEST['post'] ) ) );
+			$msgid = $_GET['msgid'];
 			self::publish_post( $post->ID );
 			wp_redirect( admin_url( 'edit.php?post_type=' . $post->post_type ) );
 		}
@@ -331,8 +333,8 @@ class ContentUpdateScheduler {
 		// Get WP date format and make it usable in the datepicker.
 		$df = get_option( 'date_format' );
 		$df = str_replace(
-			array( 'd',  'j', 'S', 'l',  'D', 'm',  'n', 'F',  'M', 'Y',  'y', 'c',        'r',         'U' ),
-			array( 'dd', 'd', '',  'DD', 'D', 'mm', 'm', 'MM', 'M', 'yy', 'y', 'yy-mm-dd', 'D, d M yy', '@' ),
+			array( 'd', 'j', 'S', 'l', 'D', 'm', 'n', 'F', 'M', 'Y', 'y', 'c', 'r', 'U' ),
+			array( 'dd', 'd', '', 'DD', 'D', 'mm', 'm', 'MM', 'M', 'yy', 'y', 'yy-mm-dd', 'D, d M yy', '@' ),
 			$df
 		);
 
@@ -344,7 +346,7 @@ class ContentUpdateScheduler {
 				'displayid'  => self::$_cus_publish_status . '_pubdate_display',
 				'dateformat' => $df,
 			),
-			'text' => array(
+			'text'       => array(
 				'save' => __( 'Save' ),
 			),
 		);
@@ -364,16 +366,16 @@ class ContentUpdateScheduler {
 	public static function create_meta_box( $post ) {
 		wp_nonce_field( basename( __FILE__ ), self::$_cus_publish_status . '_nonce' );
 		$metaname = self::$_cus_publish_status . '_pubdate';
-		$stamp = get_post_meta( $post->ID, $metaname, true );
-		$date = '';
-		$time = '';
-		$offset = get_option( 'gmt_offset' ) * 3600;
-		$dateo = new DateTime( 'now', self::get_timezone_object() );
+		$stamp    = get_post_meta( $post->ID, $metaname, true );
+		$date     = '';
+		$time     = '';
+		$offset   = get_option( 'gmt_offset' ) * 3600;
+		$dateo    = new DateTime( 'now', self::get_timezone_object() );
 		if ( $stamp ) {
 			$dateo->setTimestamp( $stamp );
 		}
-		$time = $dateo->format( 'H:i' );
-		$date = date_i18n( get_option( 'date_format' ), $dateo->getTimestamp() + $offset );
+		$time  = $dateo->format( 'H:i' );
+		$date  = date_i18n( get_option( 'date_format' ), $dateo->getTimestamp() + $offset );
 		$date2 = $dateo->format( 'd.m.Y' );
 
 		if ( ! $stamp && ContentUpdateScheduler_Options::get( 'tsu_nodate' ) === 'nothing' ) {
@@ -381,8 +383,8 @@ class ContentUpdateScheduler {
 		}
 		$dec_time = floatval( get_option( 'gmt_offset' ) );
 		$gmt_hour = floor( $dec_time );
-		$gmt_min = round( 60 * ($dec_time -$gmt_hour) );
-?>
+		$gmt_min  = round( 60 * ( $dec_time - $gmt_hour ) );
+		?>
 			<p>
 				<strong><?php esc_html_e( 'Release Date', 'cus-scheduleupdate-td' ); ?></strong>
 			</p>
@@ -403,11 +405,16 @@ class ContentUpdateScheduler {
 				<option value="<?php echo esc_attr( sprintf( '%02d', $i ) ); ?>" <?php echo intval( ceil( $dateo->format( 'i' ) / 10 ) * 10 ) === $i ? 'selected' : ''; ?>><?php echo esc_html( sprintf( '%02d', $i ) ); ?></option>
 				<?php endfor; ?>
 			</select>
-			<input type="hidden" name="cus_added_minutes" id="cus_used_gmt" value="<?php echo esc_attr( $gmt_hour >= 0 ? '+' : '-' ); echo esc_attr( sprintf( '%02d', $gmt_hour ) . ':' . sprintf( '%02d', $gmt_min ) ) ?>">
+			<input type="hidden" name="cus_added_minutes" id="cus_used_gmt" value="
+			<?php
+			echo esc_attr( $gmt_hour >= 0 ? '+' : '-' );
+			echo esc_attr( sprintf( '%02d', $gmt_hour ) . ':' . sprintf( '%02d', $gmt_min ) );
+			?>
+			">
 			<p>
 				<?php
 				// translators: timezone placeholder
-				echo sprintf( __( 'Please enter <i>Time</i> as %s', 'cus-scheduleupdate-td' ), self::get_timezone_string() ); // WPCS: XSS okay.
+				printf( __( 'Please enter <i>Time</i> as %s', 'cus-scheduleupdate-td' ), self::get_timezone_string() ); // WPCS: XSS okay.
 				?>
 			</p>
 			<p>
@@ -419,7 +426,7 @@ class ContentUpdateScheduler {
 					} else {
 						echo esc_html__( 'This post will be published 5 minutes from now.', 'cus-scheduleupdate-td' );
 					}
-?>
+					?>
 				</div>
 			</p>
 		<?php
@@ -439,7 +446,7 @@ class ContentUpdateScheduler {
 	 */
 	private static function get_timezone_string() {
 		$current_offset = get_option( 'gmt_offset' );
-		$tzstring = get_option( 'timezone_string' );
+		$tzstring       = get_option( 'timezone_string' );
 
 		$check_zone_info = true;
 
@@ -471,10 +478,10 @@ class ContentUpdateScheduler {
 	 */
 	private static function get_timezone_object() {
 		$offset = intval( get_option( 'gmt_offset' ) * 3600 );
-		$ids = DateTimeZone::listIdentifiers();
+		$ids    = DateTimeZone::listIdentifiers();
 		foreach ( $ids as $timezone ) {
 			$tzo = new DateTimeZone( $timezone );
-			$dt = new DateTime( 'now', $tzo );
+			$dt  = new DateTime( 'now', $tzo );
 			if ( $tzo->getOffset( $dt ) === $offset ) {
 				return $tzo;
 			}
@@ -495,24 +502,32 @@ class ContentUpdateScheduler {
 	 * @return void
 	 */
 	public static function prevent_status_change( $new_status, $old_status, $post ) {
-		if ( $new_status === $old_status && $new_status === self::$_cus_publish_status ) { return;
+		if ( $new_status === $old_status && $new_status === self::$_cus_publish_status ) {
+			return;
 		}
 
 		if ( $old_status === self::$_cus_publish_status && 'trash' !== $new_status ) {
 			remove_action( 'save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10 );
 
 			$post->post_status = self::$_cus_publish_status;
-			$u = wp_update_post( $post, true );
+			$u                 = wp_update_post( $post, true );
 
 			add_action( 'save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2 );
 		} elseif ( 'trash' === $new_status ) {
-			wp_clear_scheduled_hook( 'cus_publish_post', array(
-				'ID' => $post->ID,
-			) );
+			wp_clear_scheduled_hook(
+				'cus_publish_post',
+				array(
+					'ID' => $post->ID,
+				)
+			);
 		} elseif ( 'trash' === $old_status && $new_status === self::$_cus_publish_status ) {
-			wp_schedule_single_event( get_post_meta( $post->ID, self::$_cus_publish_status . '_pubdate', true ), 'cus_publish_post', array(
-				'ID' => $post->ID,
-			) );
+			wp_schedule_single_event(
+				get_post_meta( $post->ID, self::$_cus_publish_status . '_pubdate', true ),
+				'cus_publish_post',
+				array(
+					'ID' => $post->ID,
+				)
+			);
 		}
 	}
 
@@ -549,52 +564,51 @@ class ContentUpdateScheduler {
 
 		// insert the new post.
 		$new_post_id = wp_insert_post( $new_post );
-		
+
 		/**
 		 * Elementer plugin active.
 		 */
-		  
+
 		// check for plugin using plugin name
-		if(in_array('elementor/elementor.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
-			//plugin is activated
+		if ( in_array( 'elementor/elementor.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+			// plugin is activated
 			// Elementer css copy
 			$upload_dir = wp_upload_dir();
-			$dir = $upload_dir['basedir'].'/elementor/css/post-'.$post->ID.'.css';
-			$chdir = $upload_dir['basedir'].'/elementor/css/post-'.$new_post_id.'.css';
-			if(!file_exists($chdir)){
-				fopen($chdir, "w");
+			$dir        = $upload_dir['basedir'] . '/elementor/css/post-' . $post->ID . '.css';
+			$chdir      = $upload_dir['basedir'] . '/elementor/css/post-' . $new_post_id . '.css';
+			if ( ! file_exists( $chdir ) ) {
+				fopen( $chdir, 'w' );
 			}
-			
-			if(!file_exists($dir)){
-				fopen($dir, "w");
+
+			if ( ! file_exists( $dir ) ) {
+				fopen( $dir, 'w' );
 			}
-			//echo "<pre>";print_r($post);die;
-			$oldMessage = 'elementor-'.$post->ID;
-			$deletedFormat = 'elementor-'.$new_post_id;
-			//read the entire string
-			$str = file_get_contents($dir);
-			//replace something in the file string - this is a VERY simple example
-			$str=str_replace($oldMessage, $deletedFormat,$str);
-			//write the entire string
-			file_put_contents($dir, $str);
-			copy($dir, $chdir);
+			// echo "<pre>";print_r($post);die;
+			$oldMessage    = 'elementor-' . $post->ID;
+			$deletedFormat = 'elementor-' . $new_post_id;
+			// read the entire string
+			$str = file_get_contents( $dir );
+			// replace something in the file string - this is a VERY simple example
+			$str = str_replace( $oldMessage, $deletedFormat, $str );
+			// write the entire string
+			file_put_contents( $dir, $str );
+			copy( $dir, $chdir );
 		}
-		
-		if(in_array('oxygen/functions.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
-			//plugin is activated
+
+		if ( in_array( 'oxygen/functions.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
+			// plugin is activated
 			// Elementer css copy
 			$upload_dir = wp_upload_dir();
-			$dir = $upload_dir['basedir'].'/oxygen/css/'.get_post_field( 'post_name', $post->ID ).'-'.$post->ID.'.css';
-			$chdir = $upload_dir['basedir'].'/oxygen/css/'.get_post_field( 'post_name', $new_post_id ).'-'.$new_post_id.'.css';
-			if(!file_exists($chdir)){
-				fopen($chdir, "w");
+			$dir        = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field( 'post_name', $post->ID ) . '-' . $post->ID . '.css';
+			$chdir      = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field( 'post_name', $new_post_id ) . '-' . $new_post_id . '.css';
+			if ( ! file_exists( $chdir ) ) {
+				fopen( $chdir, 'w' );
 			}
-			if(!file_exists($dir)){
-				fopen($dir, "w");
+			if ( ! file_exists( $dir ) ) {
+				fopen( $dir, 'w' );
 			}
-			copy($dir, $chdir);
+			copy( $dir, $chdir );
 		}
-		
 
 		// copy meta and terms over to the new post.
 		self::copy_meta_and_terms( $post->ID, $new_post_id );
@@ -623,11 +637,12 @@ class ContentUpdateScheduler {
 	 */
 	public static function copy_meta_and_terms( $source_post_id, $destination_post_id ) {
 
-		$source_post = get_post( $source_post_id );
+		$source_post      = get_post( $source_post_id );
 		$destination_post = get_post( $destination_post_id );
 
 		// abort if any of the ids is not a post.
-		if ( ! $source_post || ! $destination_post ) { return;
+		if ( ! $source_post || ! $destination_post ) {
+			return;
 		}
 
 		/*
@@ -636,7 +651,7 @@ class ContentUpdateScheduler {
 		 */
 		$dest_keys = get_post_custom_keys( $destination_post->ID ) ?: array();
 		foreach ( $dest_keys as $key ) {
-			//delete_post_meta( $destination_post->ID, $key );
+			// delete_post_meta( $destination_post->ID, $key );
 		}
 
 		// now for copying the metadata to the new post.
@@ -652,10 +667,14 @@ class ContentUpdateScheduler {
 		// and now for copying the terms.
 		$taxonomies = get_object_taxonomies( $source_post->post_type );
 		foreach ( $taxonomies as $taxonomy ) {
-			$post_terms = wp_get_object_terms( $source_post->ID, $taxonomy, array(
-				'orderby' => 'term_order',
-			) );
-			$terms = array();
+			$post_terms = wp_get_object_terms(
+				$source_post->ID,
+				$taxonomy,
+				array(
+					'orderby' => 'term_order',
+				)
+			);
+			$terms      = array();
 			foreach ( $post_terms as $term ) {
 				$terms[] = $term->slug;
 			}
@@ -664,7 +683,6 @@ class ContentUpdateScheduler {
 			// then add new terms.
 			$what = wp_set_object_terms( $destination_post->ID, $terms, $taxonomy );
 		}
-
 	}
 
 
@@ -678,8 +696,8 @@ class ContentUpdateScheduler {
 	 */
 	public static function save_meta( $post_id, $post ) {
 		if ( $post->post_status === self::$_cus_publish_status || get_post_meta( $post_id, self::$_cus_publish_status . '_original', true ) ) {
-			$nonce = ContentUpdateScheduler::$_cus_publish_status . '_nonce';
-			$pub = ContentUpdateScheduler::$_cus_publish_status . '_pubdate';
+			$nonce       = self::$_cus_publish_status . '_nonce';
+			$pub         = self::$_cus_publish_status . '_pubdate';
 			$stampchange = false;
 
 			if ( isset( $_POST[ $nonce ] ) && wp_verify_nonce( sanitize_text_field( wp_unslash( $_POST[ $nonce ] ) ), basename( __FILE__ ) ) !== 1 ) {
@@ -690,21 +708,28 @@ class ContentUpdateScheduler {
 			}
 
 			if ( isset( $_POST[ $pub ] ) && isset( $_POST[ $pub . '_time_hrs' ] ) && isset( $_POST[ $pub . '_time_mins' ] ) && ! empty( $_POST[ $pub ] ) ) {
-				$tz = self::get_timezone_object();
+				$tz    = self::get_timezone_object();
 				$stamp = DateTime::createFromFormat( 'd.m.Y H:i', sanitize_text_field( wp_unslash( $_POST[ $pub ] ) ) . ' ' . sanitize_text_field( wp_unslash( $_POST[ $pub . '_time_hrs' ] ) ) . ':' . sanitize_text_field( wp_unslash( $_POST[ $pub . '_time_mins' ] ) ), $tz )->getTimestamp(); // WPCS: XSS okay.
 				if ( ! $stamp || $stamp <= time() ) {
-					$stamp = strtotime( '+5 minutes' );
+					$stamp       = strtotime( '+5 minutes' );
 					$stampchange = true;
 				}
 
-				wp_clear_scheduled_hook( 'cus_publish_post', array(
-					'ID' => $post_id,
-				) );
+				wp_clear_scheduled_hook(
+					'cus_publish_post',
+					array(
+						'ID' => $post_id,
+					)
+				);
 				if ( ! $stampchange || ContentUpdateScheduler_Options::get( 'tsu_nodate' ) === 'publish' ) {
 					update_post_meta( $post_id, $pub, $stamp );
-					wp_schedule_single_event( $stamp, 'cus_publish_post', array(
-						'ID' => $post_id,
-					) );
+					wp_schedule_single_event(
+						$stamp,
+						'cus_publish_post',
+						array(
+							'ID' => $post_id,
+						)
+					);
 				}
 			}
 		}
@@ -723,7 +748,7 @@ class ContentUpdateScheduler {
 	 */
 	public static function publish_post( $post_id ) {
 		$orig_id = get_post_meta( $post_id, self::$_cus_publish_status . '_original', true );
-		
+
 		// break early if given post is not an actual scheduled post created by this plugin.
 		if ( ! $orig_id ) {
 			return $post_id;
@@ -732,50 +757,50 @@ class ContentUpdateScheduler {
 		$orig = get_post( $orig_id );
 
 		$post = get_post( $post_id );
-		
+
 		/**
 		 * Elementer plugin active.
 		 */
-		  
+
 		// check for plugin using plugin name
-		if(in_array('elementor/elementor.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
+		if ( in_array( 'elementor/elementor.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
 			// Elementer css copy
 			$upload_dir = wp_upload_dir();
-			$dir = $upload_dir['basedir'].'/elementor/css/post-'.$post->ID.'.css';
-			$chdir = $upload_dir['basedir'].'/elementor/css/post-'.$post->post_parent.'.css';
-			
-			if(!file_exists($chdir)){
-				fopen($chdir, "w");
+			$dir        = $upload_dir['basedir'] . '/elementor/css/post-' . $post->ID . '.css';
+			$chdir      = $upload_dir['basedir'] . '/elementor/css/post-' . $post->post_parent . '.css';
+
+			if ( ! file_exists( $chdir ) ) {
+				fopen( $chdir, 'w' );
 			}
-			if(!file_exists($dir)){
-				fopen($dir, "w");
+			if ( ! file_exists( $dir ) ) {
+				fopen( $dir, 'w' );
 			}
-			
-			$oldMessage = 'elementor-'.$post->ID;
-			$deletedFormat = 'elementor-'.$orig_id;
-			//read the entire string
-			$str = file_get_contents($dir);
-			//replace something in the file string - this is a VERY simple example
-			$str=str_replace($oldMessage, $deletedFormat,$str);
-			//write the entire string
-			file_put_contents($dir, $str);
-			copy($dir, $chdir);
+
+			$oldMessage    = 'elementor-' . $post->ID;
+			$deletedFormat = 'elementor-' . $orig_id;
+			// read the entire string
+			$str = file_get_contents( $dir );
+			// replace something in the file string - this is a VERY simple example
+			$str = str_replace( $oldMessage, $deletedFormat, $str );
+			// write the entire string
+			file_put_contents( $dir, $str );
+			copy( $dir, $chdir );
 		}
-		
-		if(in_array('oxygen/functions.php', apply_filters('active_plugins', get_option('active_plugins')))){ 
+
+		if ( in_array( 'oxygen/functions.php', apply_filters( 'active_plugins', get_option( 'active_plugins' ) ) ) ) {
 			// Elementer css copy
 			$upload_dir = wp_upload_dir();
-			$dir = $upload_dir['basedir'].'/oxygen/css/'.get_post_field( 'post_name', $post->ID ).'-'.$post->ID.'.css';
-			$chdir = $upload_dir['basedir'].'/oxygen/css/'.get_post_field( 'post_name', $post->post_parent ).'-'.$post->post_parent.'.css';
-			if(!file_exists($chdir)){
-				fopen($chdir, "w");
+			$dir        = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field( 'post_name', $post->ID ) . '-' . $post->ID . '.css';
+			$chdir      = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field( 'post_name', $post->post_parent ) . '-' . $post->post_parent . '.css';
+			if ( ! file_exists( $chdir ) ) {
+				fopen( $chdir, 'w' );
 			}
-			if(!file_exists($dir)){
-				fopen($dir, "w");
+			if ( ! file_exists( $dir ) ) {
+				fopen( $dir, 'w' );
 			}
-			copy($dir, $chdir);
+			copy( $dir, $chdir );
 		}
-		
+
 		/**
 		 * Fires before a scheduled post is being updated
 		 *
@@ -786,12 +811,12 @@ class ContentUpdateScheduler {
 		delete_post_meta( $post->ID, self::$_cus_publish_status . '_pubdate' );
 		self::copy_meta_and_terms( $post->ID, $orig->ID );
 
-		$post->ID = $orig->ID;
-		$post->post_name = $orig->post_name;
-		$post->guid = $orig->guid;
+		$post->ID          = $orig->ID;
+		$post->post_name   = $orig->post_name;
+		$post->guid        = $orig->guid;
 		$post->post_parent = $orig->post_parent;
 		$post->post_status = $orig->post_status;
-		$post_date = date_i18n( 'Y-m-d H:i:s' );
+		$post_date         = date_i18n( 'Y-m-d H:i:s' );
 
 		/**
 		 * Filter the new posts' post date
@@ -802,11 +827,11 @@ class ContentUpdateScheduler {
 		 */
 		$post_date = apply_filters( 'ContentUpdateScheduler\\publish_post_date', $post_date, $post, $orig );
 
-		$post->post_date = $post_date; // we need this to get wp to recognize this as a newly updated post.
+		$post->post_date     = $post_date; // we need this to get wp to recognize this as a newly updated post.
 		$post->post_date_gmt = get_gmt_from_date( $post_date );
 
-		//delete_post_meta( $orig->ID, self::$_cus_publish_status . '_original' );
-		//delete_post_meta( $orig->ID, self::$_cus_publish_status . '_pubdate' );
+		// delete_post_meta( $orig->ID, self::$_cus_publish_status . '_original' );
+		// delete_post_meta( $orig->ID, self::$_cus_publish_status . '_pubdate' );
 
 		wp_update_post( $post );
 		wp_delete_post( $post_id, true );
@@ -842,15 +867,14 @@ class ContentUpdateScheduler {
 		$date = new DateTime( 'now', self::get_timezone_object() );
 		$date->setTimestamp( $stamp );
 		$offset = get_option( 'gmt_offset' ) * 3600;
-		$str = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) . ' \U\T\CO', $date->getTimestamp() + $offset );
+		$str    = date_i18n( get_option( 'date_format' ) . ' ' . get_option( 'time_format' ) . ' \U\T\CO', $date->getTimestamp() + $offset );
 		return $str;
 	}
-	
+
 	/* bhullar custom code */
-	public static function override_static_front_page_and_post_option($html, $arg)
-	{
-		$arg['post_status'] = array('publish', 'draft','future','cus_sc_publish');
-		echo self::co_wp_dropdown_pages($arg);
+	public static function override_static_front_page_and_post_option( $html, $arg ) {
+		$arg['post_status'] = array( 'publish', 'draft', 'future', 'cus_sc_publish' );
+		echo self::co_wp_dropdown_pages( $arg );
 		?>
 		<style type="text/css">
 			select#page_on_front, select#page_for_posts {float: right;margin-left: 10px;}
@@ -858,87 +882,86 @@ class ContentUpdateScheduler {
 		<?php
 	}
 
-	public static function co_wp_dropdown_pages( $args = '' )
-	{
-	    $defaults = array(
-	        'depth'                 => 0,
-	        'child_of'              => 0,
-	        'selected'              => 0,
-	        'echo'                  => 1,
-	        'name'                  => 'page_id',
-	        'id'                    => '',
-	        'class'                 => '',
-	        'show_option_none'      => '',
-	        'show_option_no_change' => '',
-	        'option_none_value'     => '',
-	        'value_field'           => 'ID',
-	    );
-	 
-	    $parsed_args = wp_parse_args( $args, $defaults );
-	 
-	    $pages  = get_pages( $parsed_args );
-	    $output = '';
-	    // Back-compat with old system where both id and name were based on $name argument
-	    if ( empty( $parsed_args['id'] ) ) {
-	        $parsed_args['id'] = $parsed_args['name'];
-	    }
-	 
-	    if ( ! empty( $pages ) ) {
-	        $class = '';
-	        if ( ! empty( $parsed_args['class'] ) ) {
-	            $class = " class='" . esc_attr( $parsed_args['class'] ) . "'";
-	        }
-	 
-	        $output = "<select name='" . esc_attr( $parsed_args['name'] ) . "'" . $class . " id='" . esc_attr( $parsed_args['id'] ) . "'>\n";
-	        if ( $parsed_args['show_option_no_change'] ) {
-	            $output .= "\t<option value=\"-1\">" . $parsed_args['show_option_no_change'] . "</option>\n";
-	        }
-	        if ( $parsed_args['show_option_none'] ) {
-	            $output .= "\t<option value=\"" . esc_attr( $parsed_args['option_none_value'] ) . '">' . $parsed_args['show_option_none'] . "</option>\n";
-	        }
-	        $output .= walk_page_dropdown_tree( $pages, $parsed_args['depth'], $parsed_args );
-	        $output .= "</select>\n";
-	    }
-	 
-	    /**
-	     * Filters the HTML output of a list of pages as a drop down.
-	     *
-	     * @since 2.1.0
-	     * @since 4.4.0 `$parsed_args` and `$pages` added as arguments.
-	     *
-	     * @param string $output      HTML output for drop down list of pages.
-	     * @param array  $parsed_args The parsed arguments array.
-	     * @param array  $pages       List of WP_Post objects returned by `get_pages()`
-	     */
-	    $html = apply_filters( 'co_wp_dropdown_pages', $output, $parsed_args, $pages );
-	 
-	    if ( $parsed_args['echo'] ) {
-	        echo $html;
-	    }
-	    return $html;
+	public static function co_wp_dropdown_pages( $args = '' ) {
+		$defaults = array(
+			'depth'                 => 0,
+			'child_of'              => 0,
+			'selected'              => 0,
+			'echo'                  => 1,
+			'name'                  => 'page_id',
+			'id'                    => '',
+			'class'                 => '',
+			'show_option_none'      => '',
+			'show_option_no_change' => '',
+			'option_none_value'     => '',
+			'value_field'           => 'ID',
+		);
+
+		$parsed_args = wp_parse_args( $args, $defaults );
+
+		$pages  = get_pages( $parsed_args );
+		$output = '';
+		// Back-compat with old system where both id and name were based on $name argument
+		if ( empty( $parsed_args['id'] ) ) {
+			$parsed_args['id'] = $parsed_args['name'];
+		}
+
+		if ( ! empty( $pages ) ) {
+			$class = '';
+			if ( ! empty( $parsed_args['class'] ) ) {
+				$class = " class='" . esc_attr( $parsed_args['class'] ) . "'";
+			}
+
+			$output = "<select name='" . esc_attr( $parsed_args['name'] ) . "'" . $class . " id='" . esc_attr( $parsed_args['id'] ) . "'>\n";
+			if ( $parsed_args['show_option_no_change'] ) {
+				$output .= "\t<option value=\"-1\">" . $parsed_args['show_option_no_change'] . "</option>\n";
+			}
+			if ( $parsed_args['show_option_none'] ) {
+				$output .= "\t<option value=\"" . esc_attr( $parsed_args['option_none_value'] ) . '">' . $parsed_args['show_option_none'] . "</option>\n";
+			}
+			$output .= walk_page_dropdown_tree( $pages, $parsed_args['depth'], $parsed_args );
+			$output .= "</select>\n";
+		}
+
+		/**
+		 * Filters the HTML output of a list of pages as a drop down.
+		 *
+		 * @since 2.1.0
+		 * @since 4.4.0 `$parsed_args` and `$pages` added as arguments.
+		 *
+		 * @param string $output      HTML output for drop down list of pages.
+		 * @param array  $parsed_args The parsed arguments array.
+		 * @param array  $pages       List of WP_Post objects returned by `get_pages()`
+		 */
+		$html = apply_filters( 'co_wp_dropdown_pages', $output, $parsed_args, $pages );
+
+		if ( $parsed_args['echo'] ) {
+			echo $html;
+		}
+		return $html;
 	}
 
-	public static function user_restriction_scheduled_content()
-	{
-		//ini_set('memory_limit', '256M');
+	public static function user_restriction_scheduled_content() {
+		// ini_set('memory_limit', '256M');
 		global $post;
-		
-		if(!current_user_can('administrator')){
-			$cus_sc_publish_pubdate = get_post_meta($post->ID, 'cus_sc_publish_pubdate', true);
-			if(!empty($cus_sc_publish_pubdate)){
+
+		if ( ! current_user_can( 'administrator' ) ) {
+			$cus_sc_publish_pubdate = get_post_meta( $post->ID, 'cus_sc_publish_pubdate', true );
+			if ( ! empty( $cus_sc_publish_pubdate ) ) {
 				global $wp_query;
 				$wp_query->set_404();
-				status_header(404);
-				get_template_part(404); 
-				//wp_redirect( esc_url(get_permalink($post->post_parent)) 
+				status_header( 404 );
+				get_template_part( 404 );
+				// wp_redirect( esc_url(get_permalink($post->post_parent))
 				exit();
-				/*if (!empty($post->post_parent) && get_post_status($post->post_parent) != 'publish') {
+				/*
+				if (!empty($post->post_parent) && get_post_status($post->post_parent) != 'publish') {
 					global $wp_query;
 					$wp_query->set_404();
 					status_header(404);
-					get_template_part(404); 
-					//wp_redirect( esc_url(get_permalink($post->post_parent)) 
-					exit(); 
+					get_template_part(404);
+					//wp_redirect( esc_url(get_permalink($post->post_parent))
+					exit();
 				}*/
 			}
 		}
@@ -961,15 +984,22 @@ add_filter( 'manage_pages_columns', array( 'ContentUpdateScheduler', 'manage_pag
 add_filter( 'page_attributes_dropdown_pages_args', array( 'ContentUpdateScheduler', 'parent_dropdown_status' ) );
 
 /* bhullar custom code */
-add_action('admin_init', function(){
-	//add_filter( 'wp_dropdown_pages', array( 'ContentUpdateScheduler', 'override_static_front_page_and_post_option' ), 1 , 2);
-});
+add_action(
+	'admin_init',
+	function () {
+		// add_filter( 'wp_dropdown_pages', array( 'ContentUpdateScheduler', 'override_static_front_page_and_post_option' ), 1 , 2);
+	}
+);
 
-add_action('admin_footer', function(){ ?>
+add_action(
+	'admin_footer',
+	function () {
+		?>
 	<style>div#ui-datepicker-div {
-    z-index: 99 !important;
+	z-index: 99 !important;
 }</style>
-	<?php
-});
+		<?php
+	}
+);
 
-add_filter( 'template_redirect', array( 'ContentUpdateScheduler', 'user_restriction_scheduled_content' ), 1);
+add_filter( 'template_redirect', array( 'ContentUpdateScheduler', 'user_restriction_scheduled_content' ), 1 );

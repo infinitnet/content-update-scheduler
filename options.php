@@ -20,7 +20,7 @@ class ContentUpdateScheduler_Options {
 	protected static $_cus_publish_options = array();
 
 	/**
-	 * Registers all needed options via the wordpress settings API
+	 * Registers all needed options via the WordPress settings API
 	 *
 	 * @see register_settig, add_settings_section, add_settings_field
 	 *
@@ -97,7 +97,7 @@ class ContentUpdateScheduler_Options {
 	}
 
 	/**
-	 * Registers the option page within wordpress
+	 * Registers the option page within WordPress
 	 *
 	 * @see add_options_page
 	 *
@@ -123,7 +123,7 @@ class ContentUpdateScheduler_Options {
 	 */
 	public static function field_nodate_cb( $args ) {
 		$options = get_option( 'tsu_options' );
-?>
+		?>
 		<select id="<?php echo esc_attr( $args['label_for'] ); ?>"
 				name="tsu_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
 		>
@@ -155,11 +155,11 @@ class ContentUpdateScheduler_Options {
 		if ( isset( $options[ $args['label_for'] ] ) ) {
 			$checked = 'checked="checked"';
 		}
-?>
+		?>
 		<label for="<?php echo esc_attr( $args['label_for'] ); ?>">
 			<input id="<?php echo esc_attr( $args['label_for'] ); ?>"
-				   type="checkbox"
-				   name="tsu_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
+					type="checkbox"
+					name="tsu_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
 					<?php echo $checked; // WPCS: XSS okay. ?>
 			>
 			<?php echo esc_html( __( 'Scheduled posts are visible for anonymous users in the frontend', 'cus-scheduleupdate-td' ) ); ?>
@@ -181,11 +181,11 @@ class ContentUpdateScheduler_Options {
 		if ( isset( $options[ $args['label_for'] ] ) ) {
 			$checked = 'checked="checked"';
 		}
-?>
+		?>
 		<label for="<?php echo esc_attr( $args['label_for'] ); ?>">
 			<input id="<?php echo esc_attr( $args['label_for'] ); ?>"
-				   type="checkbox"
-				   name="tsu_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
+					type="checkbox"
+					name="tsu_options[<?php echo esc_attr( $args['label_for'] ); ?>]"
 					<?php echo $checked; // WPCS: XSS okay. ?>
 			>
 			<?php echo esc_html( __( 'Allow recursive scheduling', 'cus-scheduleupdate-td' ) ); ?>
@@ -206,7 +206,7 @@ class ContentUpdateScheduler_Options {
 
 		// show error/update messages.
 		settings_errors( 'tsu_messages' );
-?>
+		?>
 		<div class="wrap">
 			<h1><?php echo esc_html( get_admin_page_title() ); ?></h1>
 			<form action="options.php" method="post">
@@ -219,7 +219,6 @@ class ContentUpdateScheduler_Options {
 		</div>
 		<?php
 	}
-
 }
 
 add_action( 'admin_init', array( 'ContentUpdateScheduler_Options', 'init' ) );
