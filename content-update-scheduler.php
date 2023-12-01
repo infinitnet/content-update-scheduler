@@ -646,7 +646,9 @@ class ContentUpdateScheduler {
 		}
 
 		// now for copying the metadata to the new post.
-		$meta_keys = get_post_custom_keys( $source_post->ID ) ?: array();
+		$meta_keys = get_post_custom_keys( $source_post->ID );
+		$meta_keys = $meta_keys ? $meta_keys : array();
+
 		foreach ( $meta_keys as $key ) {
 			$meta_values = get_post_custom_values( $key, $source_post->ID );
 			foreach ( $meta_values as $value ) {
