@@ -32,22 +32,24 @@ class ContentUpdateScheduler
         // Elementor plugin active.
         if (in_array('elementor/elementor.php', apply_filters('active_plugins', get_option('active_plugins')))) {
             $upload_dir = wp_upload_dir();
-            $dir = $upload_dir['basedir'] . '/elementor/css/post-' . $source_post_id . '.css';
-            $chdir = $upload_dir['basedir'] . '/elementor/css/post-' . $destination_post_id . '.css';
+            $source_css = $upload_dir['basedir'] . '/elementor/css/post-' . $source_post_id . '.css';
+            $destination_css = $upload_dir['basedir'] . '/elementor/css/post-' . $destination_post_id . '.css';
 
-            if (!file_exists($chdir)) {
-                fopen($chdir, "w");
-            }
-            if (!file_exists($dir)) {
-                fopen($dir, "w");
+            if (file_exists($source_css)) {
+                copy($source_css, $destination_css);
             }
 
-            $oldMessage = 'elementor-' . $source_post_id;
-            $deletedFormat = 'elementor-' . $destination_post_id;
-            $str = file_get_contents($dir);
-            $str = str_replace($oldMessage, $deletedFormat, $str);
-            file_put_contents($dir, $str);
-            copy($dir, $chdir);
+            // Copy Elementor data
+            $source_data = get_post_meta($source_post_id, '_elementor_data', true);
+            if ($source_data) {
+                update_post_meta($destination_post_id, '_elementor_data', $source_data);
+            }
+
+            // Copy Elementor settings
+            $source_settings = get_post_meta($source_post_id, '_elementor_settings', true);
+            if ($source_settings) {
+                update_post_meta($destination_post_id, '_elementor_settings', $source_settings);
+            }
         }
 
         // Oxygen plugin active.
