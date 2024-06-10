@@ -15,7 +15,7 @@ Schedule content updates for any WordPress page or post type.
 WordPress lacks the ability to schedule content updates. Keeping your posts and pages up to date manually can often be a waste of valuable time, especially when you know you'll need to update the same page again soon.
 
 == Use Cases ==
-* Promotions:** Automatically publish versions of your pages that contain temporary promotions and schedule content updates that remove these promotions once they expire.
+* **Promotions:** Automatically publish versions of your pages that contain temporary promotions and schedule content updates that remove these promotions once they expire.
 * **Events:** Schedule content updates for pages that list events. Automatically publish an updated version of the page after an event ends.
 * **SEO:** Schedule series of content updates to keep your pages and publishing dates current and satisfy the freshness algorithm.
 
@@ -35,7 +35,7 @@ Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned [ta
 
 1. Upload the plugin files to the `/wp-content/plugins/content-update-scheduler` directory, or install the plugin through the WordPress plugins screen directly.
 2. Activate the plugin through the 'Plugins' screen in WordPress
-3. Each page and post now has a 'Scheduled Content Update' link where you can schedule the content updates. Click on it.
+3. Each page and post now has a 'Schedule Content Update' link where you can schedule the content updates. Click on it.
 4. Select the date and time and then save as draft.
 
 == Frequently Asked Questions ==
