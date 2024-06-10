@@ -380,11 +380,11 @@ class ContentUpdateScheduler
 
         $months = array();
         for ($i = 1; $i <= 12; $i++) {
-            $months[] = date_i18n('F', strtotime('2014-' . $i . '-01 00:00:00'));
+            $months[] = wp_date('F', strtotime('2014-' . $i . '-01 00:00:00'));
         }
         $days = array();
         for ($i = 23; $i <= 29; $i++) {
-            $days[] = date_i18n('D', strtotime('2014-03-' . $i . ' 00:00:00'));
+            $days[] = wp_date('D', strtotime('2014-03-' . $i . ' 00:00:00'));
         }
 
         // Get WP date format and make it usable in the datepicker.
@@ -431,7 +431,7 @@ class ContentUpdateScheduler
         if ($stamp) {
             $dateo->setTimestamp($stamp);
         }
-        $date = date_i18n(get_option('date_format'), $dateo->getTimestamp() + $offset);
+        $date = wp_date(get_option('date_format'), $dateo->getTimestamp() + $offset);
         $date2 = $dateo->format('d.m.Y');
 
         if (! $stamp && ContentUpdateScheduler_Options::get('tsu_nodate') === 'nothing') {
@@ -770,7 +770,7 @@ class ContentUpdateScheduler
         $post->guid = $orig->guid;
         $post->post_parent = $orig->post_parent;
         $post->post_status = $orig->post_status;
-        $post_date = date_i18n('Y-m-d H:i:s');
+        $post_date = wp_date('Y-m-d H:i:s');
 
         /**
          * Filter the new posts' post date
@@ -828,7 +828,7 @@ class ContentUpdateScheduler
         $date = new DateTime('now', self::get_timezone_object());
         $date->setTimestamp($stamp);
         $offset = get_option('gmt_offset') * 3600;
-        $str = date_i18n(get_option('date_format') . ' ' . get_option('time_format') . ' \U\T\CO', $date->getTimestamp() + $offset);
+        $str = wp_date(get_option('date_format') . ' ' . get_option('time_format') . ' \U\T\CO', $date->getTimestamp() + $offset);
         return $str;
     }
 
