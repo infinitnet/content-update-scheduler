@@ -811,6 +811,11 @@ class ContentUpdateScheduler
 
         $orig = get_post($orig_id);
 
+        // Ensure the post is not in the trash before proceeding
+        if ($post->post_status === 'trash') {
+            return $post_id;
+        }
+
         $post = get_post($post_id);
 
         self::handle_plugin_css_copy($post->ID, $orig_id);
