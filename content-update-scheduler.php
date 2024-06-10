@@ -58,6 +58,45 @@ class ContentUpdateScheduler
     }
 
     /**
+     * Copies variations from one product to another.
+     *
+     * @param int $source_product_id      The product from which to copy variations.
+     * @param int $destination_product_id The product which will get the variations.
+     *
+     * @return void
+     */
+    private static function copy_product_variations($source_product_id, $destination_product_id)
+    {
+        $variations = get_children(array(
+            'post_parent' => $source_product_id,
+            'post_type'   => 'product_variation',
+            'numberposts' => -1,
+            'post_status' => 'any',
+        ));
+
+        foreach ($variations as $variation) {
+            $new_variation = array(
+                'post_title'   => $variation->post_title,
+                'post_name'    => $variation->post_name,
+                'post_status'  => $variation->post_status,
+                'post_parent'  => $destination_product_id,
+                'post_type'    => 'product_variation',
+                'menu_order'   => $variation->menu_order,
+                'post_excerpt' => $variation->post_excerpt,
+                'post_content' => $variation->post_content,
+            );
+
+            $new_variation_id = wp_insert_post($new_variation);
+
+            // Copy variation meta data
+            $meta_data = get_post_meta($variation->ID);
+            foreach ($meta_data as $key => $value) {
+                update_post_meta($new_variation_id, $key, maybe_unserialize($value[0]));
+            }
+        }
+    }
+
+    /**
      * Label to be displayed to the user
      *
      * @access public
@@ -615,6 +654,11 @@ class ContentUpdateScheduler
 
         // and finally referencing the original post.
         update_post_meta($new_post_id, self::$_cus_publish_status . '_original', $original);
+
+        // Handle WooCommerce variable products
+        if (class_exists('WooCommerce') && $post->post_type === 'product' && $post->product_type === 'variable') {
+            self::copy_product_variations($post->ID, $new_post_id);
+        }
 
         /**
          * Fires when a post has been duplicated.
