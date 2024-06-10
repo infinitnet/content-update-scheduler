@@ -372,7 +372,9 @@ class ContentUpdateScheduler
         }
 
         // hides everything except the 'publish' button in the 'publish'-metabox
-        echo '<style> #duplicate-action, #delete-action, #minor-publishing-actions, #misc-publishing-actions, #preview-action {display:none;} </style>'; // WPCS: XSS okay.
+        add_action('admin_head', function () {
+            echo '<style> #duplicate-action, #delete-action, #minor-publishing-actions, #misc-publishing-actions, #preview-action {display:none;} </style>'; // WPCS: XSS okay.
+        });
 
         wp_enqueue_script('jquery-ui-datepicker');
         wp_enqueue_style('jquery-ui-blitzer', plugin_dir_url(__FILE__) . 'jquery-ui.min.css');
