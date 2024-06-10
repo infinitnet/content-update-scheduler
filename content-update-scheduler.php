@@ -80,7 +80,7 @@ class ContentUpdateScheduler
      * @access protected
      * @var string
      */
-    protected static $_cus_publish_metabox    = 'Schedule Content Update';
+    protected static $_cus_publish_metabox    = 'Scheduled Content Update';
 
     /**
      * Status for wordpress posts
@@ -104,7 +104,7 @@ class ContentUpdateScheduler
 
         self::load_plugin_textdomain();
         self::$cus_publish_label   = __('Schedule Content Update', 'cus-scheduleupdate-td');
-        self::$_cus_publish_metabox = __('Schedule Content Update', 'cus-scheduleupdate-td');
+        self::$_cus_publish_metabox = __('Scheduled Content Update', 'cus-scheduleupdate-td');
         self::register_post_status();
 
         $pt = ContentUpdateScheduler::get_post_types();
@@ -266,7 +266,7 @@ class ContentUpdateScheduler
             $actions['publish_now'] = '<a href="' . admin_url('admin.php' . $action) . '">' . __('Publish Now', 'cus-scheduleupdate-td') . '</a>';
             $actions['copy_to_publish'] = '<a href="' . admin_url('admin.php' . $copy) . '">' . self::$cus_publish_label . '</a>';
             if (ContentUpdateScheduler_Options::get('tsu_recursive')) {
-                $actions['copy_to_publish'] = '<a href="' . admin_url('admin.php' . $copy) . '">' . __('Schedule recursive', 'cus-scheduleupdate-td') . '</a>';
+                $actions['copy_to_publish'] = '<a href="' . admin_url('admin.php' . $copy) . '">' . __('Schedule recursive/nested', 'cus-scheduleupdate-td') . '</a>';
             }
         } elseif ('trash' !== $post->post_status) {
             $actions['copy_to_publish'] = '<a href="' . admin_url('admin.php' . $copy) . '">' . self::$cus_publish_label . '</a>';
