@@ -56,7 +56,7 @@ class ContentUpdateScheduler_Options
 
         add_settings_field(
             'tsu_field_visible',
-            __('Post Visiblity', 'cus-scheduleupdate-td'),
+            __('Post Visibility', 'cus-scheduleupdate-td'),
             array( __CLASS__, 'field_visible_cb' ),
             'tsu',
             'tsu_section',
