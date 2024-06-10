@@ -461,11 +461,10 @@ class ContentUpdateScheduler
                 <option value="<?php echo esc_attr(sprintf('%02d', $i)); ?>" <?php echo intval(ceil($dateo->format('i') / 10) * 10) === $i ? 'selected' : ''; ?>><?php echo esc_html(sprintf('%02d', $i)); ?></option>
                 <?php endfor; ?>
             </select>
-            <input type="hidden" name="cus_added_minutes" id="cus_used_gmt" value="<?php echo esc_attr($gmt_hour >= 0 ? '+' : '-'); echo esc_attr(sprintf('%02d', $gmt_hour) . ':' . sprintf('%02d', $gmt_min)) ?>">
             <p>
                 <?php
                 // translators: timezone placeholder
-                echo sprintf(__('Please enter <i>Time</i> as %s', 'cus-scheduleupdate-td'), self::get_timezone_string()); // WPCS: XSS okay.
+                echo sprintf(__('Please enter <i>Time</i> in the site\'s local timezone', 'cus-scheduleupdate-td')); // WPCS: XSS okay.
                 ?>
             </p>
             <p>
