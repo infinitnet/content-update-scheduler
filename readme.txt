@@ -52,10 +52,12 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 
 = 1.1 =
 * Pull request #4 from Immediate Media merged (Github)
+* Use local WordPress time zone instead of UTC+1
 * Deduplication of some pieces of code
 * Deprecated functions and practices reduced
 * Replaced the date_i18n() function with the newer wp_date() function
 * Simplified the checkTime function in js/publish-datepicker.js
+* Wrapped wp_get_current_user() call in a conditional to check if the user is logged in
 
 = 1.0 =
 * First version.
