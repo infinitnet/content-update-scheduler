@@ -31,6 +31,11 @@ jQuery( document ).ready( function( $ ) {
 
 CUSScheduleUpdate.checkTime = function() {
 	var $ = jQuery;
+
+	// Get WordPress timezone offset in minutes
+	var offsetMins = parseInt($('#cus_used_gmt').val().split(':')[0]) * 60;
+	offsetMins += parseInt($('#cus_used_gmt').val().split(':')[1]);
+
 	var now = new Date();
 	
 	var dateString = $( '#' + CUSScheduleUpdate.datepicker.elementid ).val();
@@ -38,6 +43,10 @@ CUSScheduleUpdate.checkTime = function() {
 	var timeMin = $( 'select[name=cus_sc_publish_pubdate_time_mins]' ).val();
 	
 	var selectedDateTime = new Date(dateString + ' ' + timeHour + ':' + timeMin);
+	
+	// Adjust for WordPress timezone
+	selectedDateTime.setMinutes(selectedDateTime.getMinutes() - offsetMins);
+	now.setMinutes(now.getMinutes() - offsetMins);
 
 	if (now > selectedDateTime) {
 		$( '#pastmsg' ).show();
