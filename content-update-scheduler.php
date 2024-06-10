@@ -5,9 +5,9 @@
  *
  * Plugin Name: Content Update Scheduler
  * Description: Schedule content updates for any page or post type.
- * Author: Infinitnet/Immediate Media Co
+ * Author: Infinitnet
  * Author URI: https://infinitnet.io/
- * Version: 2023.11.03.6
+ * Version: 1.1
  * License: GPLv3
  * Text Domain: content-update-scheduler
  *
