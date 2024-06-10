@@ -31,21 +31,17 @@ jQuery( document ).ready( function( $ ) {
 
 CUSScheduleUpdate.checkTime = function() {
 	var $ = jQuery;
-	var dt, datestring, currentGmt;
-
-	var pattern = /(\d{2})\.(\d{2})\.(\d{4}) (\d{2})\:(\d{2})/;
 	var now = new Date();
-	var st = $( '#' + CUSScheduleUpdate.datepicker.elementid ).val();
-	var time = $( '#cus_sc_publish_pubdate_time' ).find( ':selected' ).val() + ':' + $( 'select[name=cus_sc_publish_pubdate_time_mins]' ).find( ':selected' ).val();
-	st += ' ' + time;
+	
+	var dateString = $( '#' + CUSScheduleUpdate.datepicker.elementid ).val();
+	var timeHour = $( '#cus_sc_publish_pubdate_time' ).val();
+	var timeMin = $( 'select[name=cus_sc_publish_pubdate_time_mins]' ).val();
+	
+	var selectedDateTime = new Date(dateString + ' ' + timeHour + ':' + timeMin);
 
-	currentGmt = $( '#cus_used_gmt' ).val();
-	datestring = st.replace( pattern, '$3-$2-$1T$4:$5:00' );
-	dt = new Date( datestring + currentGmt );
-
-	if ( now.getTime() > dt.getTime() ) {
+	if (now > selectedDateTime) {
 		$( '#pastmsg' ).show();
 	} else {
-		$( '#pastmsg' ).hide();
+		$( '#pastmsg' ).hide(); 
 	}
 };
