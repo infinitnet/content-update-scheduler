@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 3.7.0
 Tested up to: 6.5.4
-Stable tag: 1.1
+Stable tag: 1.2
 Requires PHP: 5.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -36,19 +36,24 @@ Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned [ta
 1. Upload the plugin files to the `/wp-content/plugins/content-update-scheduler` directory, or install the plugin through the WordPress plugins screen directly.
 2. Activate the plugin through the 'Plugins' screen in WordPress
 3. Each page and post now has a 'Schedule Content Update' link where you can schedule the content updates. Click on it.
-4. Select the date and time and then save as draft.
+4. Select the date and time in the new 'Scheduled Content Update' meta box on 'Page' level and then click 'Publish' to schedule it.
 
 == Frequently Asked Questions ==
 
 = How do I schedule a content update?
 
-Each page and post has a 'Schedule Content Update' link in the overview, which allows you to schedule content updates. Click on it. Then select the date and time of the update and save it as a draft (do not click Publish).
+Each page and post has a 'Schedule Content Update' link in the overview, which allows you to schedule content updates. Click on it. Then select the date and time in the new 'Scheduled Content Update' meta box on 'Page' level and then click 'Publish' to schedule it.
 
 = Does this work with page builders?
 
 Yes, it has been tested with Elementor and Oxygen Builder. It may also work with other page builders.
 
 == Changelog ==
+
+== 1.2 ==
+* Fixed the incorrect usage of action and filter hooks
+* Moved CSS output to admin_head action to avoid 'header already sent' error
+* Ensured all meta fields are correctly copied when creating the republication draft for WooCommerce variable products
 
 = 1.1 =
 * Pull request #4 from Immediate Media merged (Github)
