@@ -42,7 +42,7 @@ Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned [ta
 
 = How do I schedule a content update?
 
-Each page and post has a 'Scheduled Content Update' link in the overview, which allows you to schedule content updates. Click on it. Then select the date and time of the update and save it as a draft (do not click Publish).
+Each page and post has a 'Schedule Content Update' link in the overview, which allows you to schedule content updates. Click on it. Then select the date and time of the update and save it as a draft (do not click Publish).
 
 = Does this work with page builders?
 
