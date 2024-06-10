@@ -20,6 +20,53 @@
 class ContentUpdateScheduler
 {
     /**
+     * Handles the CSS copying for Elementor and Oxygen plugins.
+     *
+     * @param int $source_post_id The source post ID.
+     * @param int $destination_post_id The destination post ID.
+     *
+     * @return void
+     */
+    private static function handle_plugin_css_copy($source_post_id, $destination_post_id)
+    {
+        // Elementor plugin active.
+        if (in_array('elementor/elementor.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+            $upload_dir = wp_upload_dir();
+            $dir = $upload_dir['basedir'] . '/elementor/css/post-' . $source_post_id . '.css';
+            $chdir = $upload_dir['basedir'] . '/elementor/css/post-' . $destination_post_id . '.css';
+
+            if (!file_exists($chdir)) {
+                fopen($chdir, "w");
+            }
+            if (!file_exists($dir)) {
+                fopen($dir, "w");
+            }
+
+            $oldMessage = 'elementor-' . $source_post_id;
+            $deletedFormat = 'elementor-' . $destination_post_id;
+            $str = file_get_contents($dir);
+            $str = str_replace($oldMessage, $deletedFormat, $str);
+            file_put_contents($dir, $str);
+            copy($dir, $chdir);
+        }
+
+        // Oxygen plugin active.
+        if (in_array('oxygen/functions.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+            $upload_dir = wp_upload_dir();
+            $dir = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field('post_name', $source_post_id) . '-' . $source_post_id . '.css';
+            $chdir = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field('post_name', $destination_post_id) . '-' . $destination_post_id . '.css';
+
+            if (!file_exists($chdir)) {
+                fopen($chdir, "w");
+            }
+            if (!file_exists($dir)) {
+                fopen($dir, "w");
+            }
+            copy($dir, $chdir);
+        }
+    }
+
+    /**
      * Label to be displayed to the user
      *
      * @access public
@@ -559,50 +606,7 @@ class ContentUpdateScheduler
         // insert the new post.
         $new_post_id = wp_insert_post($new_post);
 
-        /**
-         * Elementer plugin active.
-         */
-
-        // check for plugin using plugin name
-        if (in_array('elementor/elementor.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-            //plugin is activated
-            // Elementer css copy
-            $upload_dir = wp_upload_dir();
-            $dir = $upload_dir['basedir'] . '/elementor/css/post-' . $post->ID . '.css';
-            $chdir = $upload_dir['basedir'] . '/elementor/css/post-' . $new_post_id . '.css';
-            if (!file_exists($chdir)) {
-                fopen($chdir, "w");
-            }
-
-            if (!file_exists($dir)) {
-                fopen($dir, "w");
-            }
-            //echo "<pre>";print_r($post);die;
-            $oldMessage = 'elementor-' . $post->ID;
-            $deletedFormat = 'elementor-' . $new_post_id;
-            //read the entire string
-            $str = file_get_contents($dir);
-            //replace something in the file string - this is a VERY simple example
-            $str = str_replace($oldMessage, $deletedFormat, $str);
-            //write the entire string
-            file_put_contents($dir, $str);
-            copy($dir, $chdir);
-        }
-
-        if (in_array('oxygen/functions.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-            //plugin is activated
-            // Elementer css copy
-            $upload_dir = wp_upload_dir();
-            $dir = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field('post_name', $post->ID) . '-' . $post->ID . '.css';
-            $chdir = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field('post_name', $new_post_id) . '-' . $new_post_id . '.css';
-            if (!file_exists($chdir)) {
-                fopen($chdir, "w");
-            }
-            if (!file_exists($dir)) {
-                fopen($dir, "w");
-            }
-            copy($dir, $chdir);
-        }
+        self::handle_plugin_css_copy($post->ID, $new_post_id);
 
         // copy meta and terms over to the new post.
         self::copy_meta_and_terms($post->ID, $new_post_id);
@@ -743,48 +747,7 @@ class ContentUpdateScheduler
 
         $post = get_post($post_id);
 
-        /**
-         * Elementer plugin active.
-         */
-
-        // check for plugin using plugin name
-        if (in_array('elementor/elementor.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-            // Elementer css copy
-            $upload_dir = wp_upload_dir();
-            $dir = $upload_dir['basedir'] . '/elementor/css/post-' . $post->ID . '.css';
-            $chdir = $upload_dir['basedir'] . '/elementor/css/post-' . $post->post_parent . '.css';
-
-            if (!file_exists($chdir)) {
-                fopen($chdir, "w");
-            }
-            if (!file_exists($dir)) {
-                fopen($dir, "w");
-            }
-
-            $oldMessage = 'elementor-' . $post->ID;
-            $deletedFormat = 'elementor-' . $orig_id;
-            //read the entire string
-            $str = file_get_contents($dir);
-            //replace something in the file string - this is a VERY simple example
-            $str = str_replace($oldMessage, $deletedFormat, $str);
-            //write the entire string
-            file_put_contents($dir, $str);
-            copy($dir, $chdir);
-        }
-
-        if (in_array('oxygen/functions.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-            // Elementer css copy
-            $upload_dir = wp_upload_dir();
-            $dir = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field('post_name', $post->ID) . '-' . $post->ID . '.css';
-            $chdir = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field('post_name', $post->post_parent) . '-' . $post->post_parent . '.css';
-            if (!file_exists($chdir)) {
-                fopen($chdir, "w");
-            }
-            if (!file_exists($dir)) {
-                fopen($dir, "w");
-            }
-            copy($dir, $chdir);
-        }
+        self::handle_plugin_css_copy($post->ID, $orig_id);
 
         /**
          * Fires before a scheduled post is being updated
