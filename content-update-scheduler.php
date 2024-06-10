@@ -659,16 +659,18 @@ class ContentUpdateScheduler
             delete_post_meta($destination_post->ID, $key); // Delete existing meta to avoid duplicates
             foreach ($values as $value) {
                 try {
-                    $value = maybe_unserialize($value);
-                    if ($restore_references && is_string($value) && strpos($value, (string)$source_post->ID) !== false) {
-                        $value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $value);
-                    }
-                    add_post_meta($destination_post->ID, $key, $value);
+                    $unserialized_value = maybe_unserialize($value);
                 } catch (Exception $e) {
-                    // Log the error and continue
-                    error_log('Error copying meta for key: ' . $key . '. ' . $e->getMessage());
+                    // Log the error and skip this meta entry
+                    error_log('Error unserializing meta for key: ' . $key . '. ' . $e->getMessage());
                     continue;
                 }
+                
+                if ($restore_references && is_string($unserialized_value) && strpos($unserialized_value, (string)$source_post->ID) !== false) {
+                    $unserialized_value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $unserialized_value);
+                }
+                
+                add_post_meta($destination_post->ID, $key, $unserialized_value);
             }
         }
 
