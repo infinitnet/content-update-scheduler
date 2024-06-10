@@ -818,11 +818,9 @@ class ContentUpdateScheduler
      */
     public static function get_pubdate($stamp)
     {
-        $date = new DateTime('now', self::get_timezone_object());
-        $date->setTimestamp($stamp);
-        $offset = get_option('gmt_offset') * 3600;
-        $str = wp_date(get_option('date_format') . ' ' . get_option('time_format') . ' \U\T\CO', $date->getTimestamp() + $offset);
-        return $str;
+        $date = new DateTime('@' . $stamp);
+        $date->setTimezone(self::get_timezone_object());
+        return $date->format(get_option('date_format') . ' ' . get_option('time_format'));
     }
 
     /* bhullar custom code */
