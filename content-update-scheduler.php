@@ -288,7 +288,7 @@ class ContentUpdateScheduler
         foreach ($columns as $key => $val) {
             $new[ $key ] = $val;
             if ('title' === $key) {
-                $new['cus_publish'] = esc_html__('Release Date', 'cus-scheduleupdate-td');
+                $new['cus_publish'] = esc_html__('Republication Date', 'cus-scheduleupdate-td');
             }
         }
         return $new;
@@ -442,9 +442,9 @@ class ContentUpdateScheduler
         $gmt_min = round(60 * ($dec_time - $gmt_hour));
         ?>
             <p>
-                <strong><?php esc_html_e('Release Date', 'cus-scheduleupdate-td'); ?></strong>
+                <strong><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></strong>
             </p>
-            <label class="screen-reader-text" for="<?php echo esc_attr($metaname); ?>"><?php esc_html_e('Release Date', 'cus-scheduleupdate-td'); ?></label>
+            <label class="screen-reader-text" for="<?php echo esc_attr($metaname); ?>"><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></label>
             <input type="hidden" name="<?php echo esc_attr($metaname); ?>" id="<?php echo esc_attr($metaname); ?>" value="<?php echo esc_attr($date2); ?>"/>
             <input type="text" class="widefat" name="<?php echo esc_attr($metaname); ?>_display" id="<?php echo esc_attr($metaname); ?>_display" value="<?php echo esc_attr($date); ?>"/>
             <p>

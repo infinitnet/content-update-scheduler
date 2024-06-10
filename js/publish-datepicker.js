@@ -32,7 +32,6 @@ jQuery( document ).ready( function( $ ) {
 CUSScheduleUpdate.checkTime = function() {
 	var $ = jQuery;
 
-	// Get WordPress timezone offset in minutes
 	// WordPress timezone offset is already handled server-side
 	var offsetMins = 0;
 
