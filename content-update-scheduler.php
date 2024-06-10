@@ -658,26 +658,27 @@ class ContentUpdateScheduler
         foreach ($meta as $key => $values) {
             delete_post_meta($destination_post->ID, $key); // Delete existing meta to avoid duplicates
             foreach ($values as $value) {
-                try {
+                if (is_serialized($value)) {
+                    $value = preg_replace_callback('/O:\d+:"([^"]+)"/', function ($matches) {
+                        return class_exists($matches[1]) ? $matches[0] : 'O:8:"stdClass"';
+                    }, $value);
+                    
                     $unserialized_value = maybe_unserialize($value);
                     
-                    // Check if the unserialized value is an object of an undefined class
-                    if (is_object($unserialized_value) && !class_exists(get_class($unserialized_value))) {
-                        // Log the error and skip this entire meta entry
-                        error_log('Skipping meta entry for key: ' . $key . '. Unserialized value is an object of undefined class: ' . get_class($unserialized_value));
-                        continue 2; // Skip to the next metadata entry
+                    if (is_string($unserialized_value) && strpos($unserialized_value, 'O:8:"stdClass"') !== false) {
+                        // Skip this meta entry if it contains undefined objects
+                        error_log('Skipping meta entry for key: ' . $key . '. Unserialized value contains undefined objects.');
+                        continue 2;
                     }
-                    
-                    if ($restore_references && is_string($unserialized_value) && strpos($unserialized_value, (string)$source_post->ID) !== false) {
-                        $unserialized_value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $unserialized_value);
-                    }
-                    
-                    add_post_meta($destination_post->ID, $key, $unserialized_value);
-                } catch (Exception $e) {
-                    // Log the error and skip this entire meta entry
-                    error_log('Error processing meta for key: ' . $key . '. ' . $e->getMessage());
-                    continue 2; // Skip to the next metadata entry
+                } else {
+                    $unserialized_value = $value;
                 }
+                
+                if ($restore_references && is_string($unserialized_value) && strpos($unserialized_value, (string)$source_post->ID) !== false) {
+                    $unserialized_value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $unserialized_value);
+                }
+                
+                add_post_meta($destination_post->ID, $key, $unserialized_value);
             }
         }
 
