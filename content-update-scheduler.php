@@ -656,8 +656,11 @@ class ContentUpdateScheduler
         update_post_meta($new_post_id, self::$_cus_publish_status . '_original', $original);
 
         // Handle WooCommerce variable products
-        if (class_exists('WooCommerce') && $post->post_type === 'product' && $post->product_type === 'variable') {
-            self::copy_product_variations($post->ID, $new_post_id);
+        if (class_exists('WooCommerce') && $post->post_type === 'product') {
+            $product = wc_get_product($post->ID);
+            if ($product && $product->is_type('variable')) {
+                self::copy_product_variations($post->ID, $new_post_id);
+            }
         }
 
         /**
