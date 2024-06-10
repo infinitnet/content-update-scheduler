@@ -659,8 +659,25 @@ class ContentUpdateScheduler
         // now for copying the metadata to the new post.
         $meta = get_post_meta($source_post->ID);
         foreach ($meta as $key => $values) {
+            delete_post_meta($destination_post->ID, $key); // Delete existing meta to avoid duplicates
             foreach ($values as $value) {
-                update_post_meta($destination_post->ID, $key, maybe_unserialize($value));
+                add_post_meta($destination_post->ID, $key, maybe_unserialize($value));
+            }
+        }
+
+        // Copy product variation meta for WooCommerce variable products
+        if ($source_post->post_type === 'product') {
+            $product = wc_get_product($source_post->ID);
+            if ($product->is_type('variable')) {
+                $variations = $product->get_children();
+                foreach ($variations as $variation_id) {
+                    $variation_meta = get_post_meta($variation_id);
+                    foreach ($variation_meta as $key => $values) {
+                        foreach ($values as $value) {
+                            add_post_meta($variation_id, $key, maybe_unserialize($value), true);
+                        }
+                    }
+                }
             }
         }
 
