@@ -52,7 +52,7 @@ class ContentUpdateScheduler_Options
 
         add_settings_field(
             'tsu_field_visible',
-            __('Posts Visible', 'cus-scheduleupdate-td'),
+            __('Post Visiblity', 'cus-scheduleupdate-td'),
             array( __CLASS__, 'field_visible_cb' ),
             'tsu',
             'tsu_section',
@@ -64,7 +64,7 @@ class ContentUpdateScheduler_Options
 
         add_settings_field(
             'tsu_field_recursive',
-            __('Recursive scheduling', 'cus-scheduleupdate-td'),
+            __('Recursive Scheduling', 'cus-scheduleupdate-td'),
             array( __CLASS__, 'field_recursive_cb' ),
             'tsu',
             'tsu_section',
@@ -196,7 +196,7 @@ class ContentUpdateScheduler_Options
                    name="tsu_options[<?php echo esc_attr($args['label_for']); ?>]"
                     <?php echo $checked; // WPCS: XSS okay. ?>
             >
-            <?php echo esc_html(__('Allow recursive scheduling', 'cus-scheduleupdate-td')); ?>
+            <?php echo esc_html(__('Allow recursive/nested scheduling', 'cus-scheduleupdate-td')); ?>
         </label>
         <?php
     }
