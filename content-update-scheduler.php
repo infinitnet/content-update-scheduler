@@ -663,7 +663,7 @@ class ContentUpdateScheduler
                 } catch (Exception $e) {
                     // Log the error and skip this meta entry
                     error_log('Error unserializing meta for key: ' . $key . '. ' . $e->getMessage());
-                    continue;
+                    continue 2; // Skip to the next metadata entry
                 }
                 
                 if ($restore_references && is_string($unserialized_value) && strpos($unserialized_value, (string)$source_post->ID) !== false) {
