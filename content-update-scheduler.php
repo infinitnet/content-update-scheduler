@@ -676,22 +676,6 @@ class ContentUpdateScheduler
             }
         }
 
-        // Copy product variation meta for WooCommerce variable products, including external variations
-        if ($source_post->post_type === 'product') {
-            $product = wc_get_product($source_post->ID);
-            if ($product->is_type('variable')) {
-                $variations = $product->get_children();
-                foreach ($variations as $variation_id) {
-                    $variation_meta = get_post_meta($variation_id);
-                    foreach ($variation_meta as $key => $values) {
-                        foreach ($values as $value) {
-                            add_post_meta($variation_id, $key, maybe_unserialize($value), true);
-                        }
-                    }
-                }
-            }
-        }
-
         // and now for copying the terms.
         $taxonomies = get_object_taxonomies($source_post->post_type);
         foreach ($taxonomies as $taxonomy) {
