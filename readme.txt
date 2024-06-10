@@ -1,6 +1,6 @@
 === Content Update Scheduler ===
 Contributors: infinitnet
-Tags: schedule, timing, scheduler, content, update, publish, time, publication
+Tags: schedule, scheduling, update, republish, publication
 Requires at least: 3.7.0
 Tested up to: 6.5.4
 Stable tag: 1.1
