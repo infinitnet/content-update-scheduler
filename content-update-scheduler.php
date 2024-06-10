@@ -628,10 +628,11 @@ class ContentUpdateScheduler
      *
      * @param int $source_post_id      the post from which to copy.
      * @param int $destination_post_id the post which will get the meta and terms.
+     * @param bool $restore_references Whether to restore references to the original post ID.
      *
      * @return void
      */
-    public static function copy_meta_and_terms($source_post_id, $destination_post_id)
+    public static function copy_meta_and_terms($source_post_id, $destination_post_id, $restore_references = false)
     {
 
         $source_post = get_post($source_post_id);
@@ -652,16 +653,24 @@ class ContentUpdateScheduler
         foreach ($meta as $key => $values) {
             delete_post_meta($destination_post->ID, $key); // Delete existing meta to avoid duplicates
             foreach ($values as $value) {
-                add_post_meta($destination_post->ID, $key, maybe_unserialize($value));
+                $value = maybe_unserialize($value);
+                if ($restore_references && is_string($value) && strpos($value, (string)$source_post->ID) !== false) {
+                    $value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $value);
+                }
+                add_post_meta($destination_post->ID, $key, $value);
             }
         }
 
-        // Copy all meta fields dynamically
+        // Copy all meta fields dynamically and update references to the original post ID
         $meta = get_post_meta($source_post->ID);
         foreach ($meta as $key => $values) {
             delete_post_meta($destination_post->ID, $key); // Delete existing meta to avoid duplicates
             foreach ($values as $value) {
-                add_post_meta($destination_post->ID, $key, maybe_unserialize($value));
+                $value = maybe_unserialize($value);
+                if (is_string($value) && strpos($value, (string)$source_post->ID) !== false) {
+                    $value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $value);
+                }
+                add_post_meta($destination_post->ID, $key, $value);
             }
         }
 
@@ -759,7 +768,8 @@ class ContentUpdateScheduler
          */
         do_action('ContentUpdateScheduler\\before_publish_post', $post, $orig);
         delete_post_meta($post->ID, self::$_cus_publish_status . '_pubdate');
-        self::copy_meta_and_terms($post->ID, $orig->ID);
+        // Copy meta and terms, restoring references to the original post ID
+        self::copy_meta_and_terms($post->ID, $orig->ID, true);
 
         $post->ID = $orig->ID;
         $post->post_name = $orig->post_name;
