@@ -50,6 +50,9 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 
 == Changelog ==
 
+== 1.3 ==
+* Elementor compatibility: Updated handling of Elementor CSS and added meta data copying
+
 == 1.2 ==
 * Fixed the incorrect usage of action and filter hooks
 * Moved CSS output to admin_head action to avoid 'header already sent' error
