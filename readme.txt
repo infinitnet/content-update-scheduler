@@ -55,6 +55,7 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 * Deduplication of some pieces of code
 * Deprecated functions and practices reduced
 * Replaced the date_i18n() function with the newer wp_date() function
+* Simplified the checkTime function in js/publish-datepicker.js
 
 = 1.0 =
 * First version.
