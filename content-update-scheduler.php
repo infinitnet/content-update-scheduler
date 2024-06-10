@@ -654,18 +654,12 @@ class ContentUpdateScheduler
          * remove all meta from the destination,
          * initialize to emptyarray if not set to prevent error in foreach loop
          */
-        $dest_keys = get_post_custom_keys($destination_post->ID) ?: array();
-        foreach ($dest_keys as $key) {
-            //delete_post_meta( $destination_post->ID, $key );
-        }
 
         // now for copying the metadata to the new post.
-        $meta_keys = get_post_custom_keys($source_post->ID) ?: array();
-        foreach ($meta_keys as $key) {
-            $meta_values = get_post_custom_values($key, $source_post->ID);
-            foreach ($meta_values as $value) {
-                $value = maybe_unserialize($value);
-                update_post_meta($destination_post->ID, $key, $value);
+        $meta = get_post_meta($source_post->ID);
+        foreach ($meta as $key => $values) {
+            foreach ($values as $value) {
+                update_post_meta($destination_post->ID, $key, maybe_unserialize($value));
             }
         }
 
