@@ -72,7 +72,7 @@ class ContentUpdateScheduler
      * @access public
      * @var string
      */
-    public static $cus_publish_label         = 'Scheduled Content Update';
+    public static $cus_publish_label         = 'Schedule Content Update';
 
     /**
      * Title for the Publish Metabox
@@ -80,7 +80,7 @@ class ContentUpdateScheduler
      * @access protected
      * @var string
      */
-    protected static $_cus_publish_metabox    = 'Scheduled Content Update';
+    protected static $_cus_publish_metabox    = 'Schedule Content Update';
 
     /**
      * Status for wordpress posts
@@ -103,8 +103,8 @@ class ContentUpdateScheduler
         require_once dirname(__FILE__) . '/options.php';
 
         self::load_plugin_textdomain();
-        self::$cus_publish_label   = __('Scheduled Content Update', 'cus-scheduleupdate-td');
-        self::$_cus_publish_metabox = __('Scheduled Content Update', 'cus-scheduleupdate-td');
+        self::$cus_publish_label   = __('Schedule Content Update', 'cus-scheduleupdate-td');
+        self::$_cus_publish_metabox = __('Schedule Content Update', 'cus-scheduleupdate-td');
         self::register_post_status();
 
         $pt = ContentUpdateScheduler::get_post_types();
@@ -180,7 +180,7 @@ class ContentUpdateScheduler
         $exclude_from_search = ! is_admin();
 
         $args = array(
-            'label'                     => _x('Scheduled Content Update', 'Status General Name', 'default'),
+            'label'                     => _x('Schedule Content Update', 'Status General Name', 'default'),
             'public'                    => $public,
             'internal'                  => true,
             'publicly_queryable'        => true,
@@ -189,7 +189,7 @@ class ContentUpdateScheduler
             'show_in_admin_all_list'    => true,
             'show_in_admin_status_list' => true,
             // translators: number of posts.
-            'label_count'               => _n_noop('Scheduled Content Update <span class="count">(%s)</span>', 'Scheduled Content Update <span class="count">(%s)</span>', 'cus-scheduleupdate-td'),
+            'label_count'               => _n_noop('Schedule Content Update <span class="count">(%s)</span>', 'Schedule Content Update <span class="count">(%s)</span>', 'cus-scheduleupdate-td'),
         );
 
         register_post_status(self::$_cus_publish_status, $args);
