@@ -148,6 +148,30 @@ class ContentUpdateScheduler_Options
     }
 
     /**
+     * Renders a checkbox field.
+     *
+     * @param array $args array of arguments, passed by do_settings_fields.
+     * @param string $label The label for the checkbox.
+     *
+     * @return void
+     */
+    private static function render_checkbox_field($args, $label)
+    {
+        $options = get_option('tsu_options');
+        $checked = isset($options[$args['label_for']]) ? 'checked="checked"' : '';
+        ?>
+        <label for="<?php echo esc_attr($args['label_for']); ?>">
+            <input id="<?php echo esc_attr($args['label_for']); ?>"
+                   type="checkbox"
+                   name="tsu_options[<?php echo esc_attr($args['label_for']); ?>]"
+                   <?php echo $checked; // WPCS: XSS okay. ?>
+            >
+            <?php echo esc_html($label); ?>
+        </label>
+        <?php
+    }
+
+    /**
      * Renders the settings field for `visible`
      *
      * @param array $args array of arguments, passed by do_settings_fields.
@@ -156,22 +180,7 @@ class ContentUpdateScheduler_Options
      */
     public static function field_visible_cb($args)
     {
-        $options = get_option('tsu_options');
-
-        $checked = '';
-        if (isset($options[ $args['label_for'] ])) {
-            $checked = 'checked="checked"';
-        }
-        ?>
-        <label for="<?php echo esc_attr($args['label_for']); ?>">
-            <input id="<?php echo esc_attr($args['label_for']); ?>"
-                   type="checkbox"
-                   name="tsu_options[<?php echo esc_attr($args['label_for']); ?>]"
-                    <?php echo $checked; // WPCS: XSS okay. ?>
-            >
-            <?php echo esc_html(__('Scheduled posts are visible for anonymous users in the frontend', 'cus-scheduleupdate-td')); ?>
-        </label>
-        <?php
+        self::render_checkbox_field($args, __('Scheduled posts are visible for anonymous users in the frontend', 'cus-scheduleupdate-td'));
     }
 
     /**
@@ -183,22 +192,7 @@ class ContentUpdateScheduler_Options
      */
     public static function field_recursive_cb($args)
     {
-        $options = get_option('tsu_options');
-
-        $checked = '';
-        if (isset($options[ $args['label_for'] ])) {
-            $checked = 'checked="checked"';
-        }
-        ?>
-        <label for="<?php echo esc_attr($args['label_for']); ?>">
-            <input id="<?php echo esc_attr($args['label_for']); ?>"
-                   type="checkbox"
-                   name="tsu_options[<?php echo esc_attr($args['label_for']); ?>]"
-                    <?php echo $checked; // WPCS: XSS okay. ?>
-            >
-            <?php echo esc_html(__('Allow recursive/nested scheduling', 'cus-scheduleupdate-td')); ?>
-        </label>
-        <?php
+        self::render_checkbox_field($args, __('Allow recursive/nested scheduling', 'cus-scheduleupdate-td'));
     }
 
     /**
