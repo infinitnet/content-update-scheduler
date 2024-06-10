@@ -31,7 +31,7 @@ class ContentUpdateScheduler_Options
     {
         register_setting('cus_schedule_update', 'tsu_options', array(
             'type' => 'array',
-            'sanitize_callback' => 'sanitize_text_field',
+            'sanitize_callback' => array(__CLASS__, 'sanitize_options'),
             'default' => array(),
         ));
 
@@ -77,6 +77,28 @@ class ContentUpdateScheduler_Options
                 'class'     => 'tsu_row',
             )
         );
+    }
+
+    /**
+     * Sanitizes the options array.
+     *
+     * @param array $options The options array to sanitize.
+     *
+     * @return array The sanitized options array.
+     */
+    public static function sanitize_options($options)
+    {
+        $sanitized_options = array();
+
+        foreach ($options as $key => $value) {
+            if ($key === 'tsu_recursive' || $key === 'tsu_visible') {
+                $sanitized_options[$key] = $value === 'on' ? 'on' : '';
+            } else {
+                $sanitized_options[$key] = sanitize_text_field($value);
+            }
+        }
+
+        return $sanitized_options;
     }
 
     /**
