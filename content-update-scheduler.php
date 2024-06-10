@@ -674,26 +674,6 @@ class ContentUpdateScheduler
             }
         }
 
-        // Copy meta fields, skipping any that fail to unserialize
-        $meta = get_post_meta($source_post->ID);
-        foreach ($meta as $key => $values) {
-            delete_post_meta($destination_post->ID, $key); // Delete existing meta to avoid duplicates
-            foreach ($values as $value) {
-                try {
-                    $unserialized_value = maybe_unserialize($value);
-                } catch (Exception $e) {
-                    // Log the error and skip this meta entry
-                    error_log('Error unserializing meta for key: ' . $key . '. ' . $e->getMessage());
-                    continue;
-                }
-                
-                if ($restore_references && is_string($unserialized_value) && strpos($unserialized_value, (string)$source_post->ID) !== false) {
-                    $unserialized_value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $unserialized_value);
-                }
-                
-                add_post_meta($destination_post->ID, $key, $unserialized_value);
-            }
-        }
 
         // and now for copying the terms.
         $taxonomies = get_object_taxonomies($source_post->post_type);
