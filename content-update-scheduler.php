@@ -328,6 +328,7 @@ class ContentUpdateScheduler
             $publishing_id = self::create_publishing_post($post);
             if ($publishing_id) {
                 wp_redirect(admin_url('post.php?action=edit&post=' . $publishing_id));
+                exit;
             } else {
                 // translators: %1$s: post type, %2$s: post title.
                 $html  = sprintf(__('Could not schedule %1$s %2$s', 'cus-scheduleupdate-td'), $post->post_type, '<i>' . htmlspecialchars($post->post_title) . '</i>');
@@ -349,6 +350,8 @@ class ContentUpdateScheduler
             $post = get_post(absint(wp_unslash($_REQUEST['post'])));
             self::publish_post($post->ID);
             wp_redirect(admin_url('edit.php?post_type=' . $post->post_type));
+            exit;
+            exit;
         }
     }
 
@@ -604,7 +607,10 @@ class ContentUpdateScheduler
         );
 
         // insert the new post.
-        $new_post_id = wp_insert_post($new_post);
+        $new_post_id = wp_insert_post($new_post, true);
+        if (is_wp_error($new_post_id)) {
+            return $new_post_id;
+        }
 
         self::handle_plugin_css_copy($post->ID, $new_post_id);
 
@@ -781,8 +787,14 @@ class ContentUpdateScheduler
         //delete_post_meta( $orig->ID, self::$_cus_publish_status . '_original' );
         //delete_post_meta( $orig->ID, self::$_cus_publish_status . '_pubdate' );
 
-        wp_update_post($post);
-        wp_delete_post($post_id, true);
+        $result = wp_update_post($post, true);
+        if (is_wp_error($result)) {
+            return $result;
+        }
+        $result = wp_delete_post($post_id, true);
+        if (is_wp_error($result)) {
+            return $result;
+        }
 
         return $orig->ID;
     }

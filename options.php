@@ -29,7 +29,11 @@ class ContentUpdateScheduler_Options
      */
     public static function init()
     {
-        register_setting('cus_schedule_update', 'tsu_options');
+        register_setting('cus_schedule_update', 'tsu_options', array(
+            'type' => 'array',
+            'sanitize_callback' => 'sanitize_text_field',
+            'default' => array(),
+        ));
 
         add_settings_section(
             'tsu_section',
@@ -208,7 +212,7 @@ class ContentUpdateScheduler_Options
         }
 
         // show error/update messages.
-        settings_errors('tsu_messages');
+        settings_errors('tsu_messages', true);
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
