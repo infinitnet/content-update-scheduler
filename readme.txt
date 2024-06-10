@@ -53,6 +53,7 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 = 1.1 =
 * Pull request #4 from Immediate Media merged (Github)
 * Use local WordPress time zone instead of UTC+1
+* Retain original post author
 * Deduplication of some pieces of code
 * Deprecated functions and practices reduced
 * Replaced the date_i18n() function with the newer wp_date() function
