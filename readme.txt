@@ -2,7 +2,7 @@
 Contributors: infinitnet
 Tags: schedule, timing, scheduler, content, update, publish, time, publication
 Requires at least: 3.7.0
-Tested up to: 5.4
+Tested up to: 6.5.4
 Stable tag: 1.1
 Requires PHP: 5.3
 License: GPLv3
@@ -27,7 +27,7 @@ WordPress lacks the ability to schedule content updates. Keeping your posts and 
 * Lightweight code
 
 == Credits ==
-Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned plugin [tao-schedule-update](https://github.com/tao-software/tao-schedule-update). Major contributions by [Immediate Media](https://immediate.co.uk/)
+Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned [tao-schedule-update](https://github.com/tao-software/tao-schedule-update) plugin. Major contributions by [Immediate Media](https://immediate.co.uk/)
 
 **Github:** [https://github.com/infinitnet/content-update-scheduler/](https://github.com/infinitnet/content-update-scheduler/)
 
@@ -51,7 +51,10 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 == Changelog ==
 
 = 1.1 =
-* Pull request from Immediate Media merged
+* Pull request #4 from Immediate Media merged (Github)
+* Deduplication of some pieces of code
+* Deprecated functions and practices reduced
+* Replaced the date_i18n() function with the newer wp_date() function
 
 = 1.0 =
 * First version.
