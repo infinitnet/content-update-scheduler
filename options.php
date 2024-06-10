@@ -196,7 +196,7 @@ class ContentUpdateScheduler_Options
      */
     public static function field_recursive_cb($args)
     {
-        self::render_checkbox_field($args, __('Allow recursive/nested scheduling', 'cus-scheduleupdate-td'));
+        self::render_checkbox_field($args, __('Allow recursive scheduling', 'cus-scheduleupdate-td'));
     }
 
     /**
