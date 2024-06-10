@@ -582,11 +582,15 @@ class ContentUpdateScheduler
      */
     public static function create_publishing_post($post)
     {
-        $new_author = wp_get_current_user();
-
         $original = $post->ID;
         if ($post->post_status === self::$_cus_publish_status) {
             $original = get_post_meta($post->ID, self::$_cus_publish_status . '_original', true);
+        }
+        
+        if (is_user_logged_in()) {
+            $new_author = wp_get_current_user(); 
+        } else {
+            $new_author = get_user_by('id', $post->post_author);
         }
 
         // create the new post.
