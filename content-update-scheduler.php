@@ -667,7 +667,16 @@ class ContentUpdateScheduler
             }
         }
 
-        // Copy product variation meta for WooCommerce variable products
+        // Copy all meta fields dynamically
+        $meta = get_post_meta($source_post->ID);
+        foreach ($meta as $key => $values) {
+            delete_post_meta($destination_post->ID, $key); // Delete existing meta to avoid duplicates
+            foreach ($values as $value) {
+                add_post_meta($destination_post->ID, $key, maybe_unserialize($value));
+            }
+        }
+
+        // Copy product variation meta for WooCommerce variable products, including external variations
         if ($source_post->post_type === 'product') {
             $product = wc_get_product($source_post->ID);
             if ($product->is_type('variable')) {
