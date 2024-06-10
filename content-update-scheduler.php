@@ -660,17 +660,17 @@ class ContentUpdateScheduler
             foreach ($values as $value) {
                 try {
                     $unserialized_value = maybe_unserialize($value);
+                    
+                    if ($restore_references && is_string($unserialized_value) && strpos($unserialized_value, (string)$source_post->ID) !== false) {
+                        $unserialized_value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $unserialized_value);
+                    }
+                    
+                    add_post_meta($destination_post->ID, $key, $unserialized_value);
                 } catch (Exception $e) {
-                    // Log the error and skip this meta entry
-                    error_log('Error unserializing meta for key: ' . $key . '. ' . $e->getMessage());
+                    // Log the error and skip this entire meta entry
+                    error_log('Error processing meta for key: ' . $key . '. ' . $e->getMessage());
                     continue 2; // Skip to the next metadata entry
                 }
-                
-                if ($restore_references && is_string($unserialized_value) && strpos($unserialized_value, (string)$source_post->ID) !== false) {
-                    $unserialized_value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $unserialized_value);
-                }
-                
-                add_post_meta($destination_post->ID, $key, $unserialized_value);
             }
         }
 
