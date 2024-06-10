@@ -98,17 +98,16 @@ class ContentUpdateScheduler
         self::$_cus_publish_metabox = __('Scheduled Content Update', 'cus-scheduleupdate-td');
         self::register_post_status();
 
-        $post_types = get_post_types(array('public' => true), 'names');
+        $post_types = array_merge(
+            get_post_types(array('public' => true), 'names'), 
+            array('product')
+        );
+        
         foreach ($post_types as $post_type) {
             add_filter('manage_edit-' . $post_type . '_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
             add_action('manage_' . $post_type . '_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
             add_action('add_meta_boxes', array( 'ContentUpdateScheduler', 'add_meta_boxes_page' ), 10, 2);
         }
-
-        // Ensure WooCommerce products are included
-        add_filter('manage_edit-product_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
-        add_action('manage_product_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
-        add_action('add_meta_boxes', array( 'ContentUpdateScheduler', 'add_meta_boxes_page' ), 10, 2);
     }
 
     /**
