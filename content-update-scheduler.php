@@ -109,8 +109,8 @@ class ContentUpdateScheduler
 
         $pt = ContentUpdateScheduler::get_post_types();
         foreach ($pt as $type) {
-            add_action('manage_edit-' . $type->name . '_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
-            add_filter('manage_' . $type->name . '_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
+            add_filter('manage_edit-' . $type->name . '_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
+            add_action('manage_' . $type->name . '_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
             add_action('add_meta_boxes', array( 'ContentUpdateScheduler', 'add_meta_boxes_page' ), 10, 2);
         }
     }
