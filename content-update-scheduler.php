@@ -39,17 +39,6 @@ class ContentUpdateScheduler
                 copy($source_css, $destination_css);
             }
 
-            // Copy Elementor data
-            $source_data = get_post_meta($source_post_id, '_elementor_data', true);
-            if ($source_data) {
-                update_post_meta($destination_post_id, '_elementor_data', $source_data);
-            }
-
-            // Copy Elementor settings
-            $source_settings = get_post_meta($source_post_id, '_elementor_settings', true);
-            if ($source_settings) {
-                update_post_meta($destination_post_id, '_elementor_settings', $source_settings);
-            }
         }
 
         // Oxygen plugin active.
