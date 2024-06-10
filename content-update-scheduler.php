@@ -661,6 +661,13 @@ class ContentUpdateScheduler
                 try {
                     $unserialized_value = maybe_unserialize($value);
                     
+                    // Check if the unserialized value is an object of an undefined class
+                    if (is_object($unserialized_value) && !class_exists(get_class($unserialized_value))) {
+                        // Log the error and skip this entire meta entry
+                        error_log('Skipping meta entry for key: ' . $key . '. Unserialized value is an object of undefined class: ' . get_class($unserialized_value));
+                        continue 2; // Skip to the next metadata entry
+                    }
+                    
                     if ($restore_references && is_string($unserialized_value) && strpos($unserialized_value, (string)$source_post->ID) !== false) {
                         $unserialized_value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $unserialized_value);
                     }
