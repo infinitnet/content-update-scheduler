@@ -51,7 +51,7 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 == Changelog ==
 
 === 1.7 ===
-* Fixed fatal error when class definition of metadata is missing
+* Fixed fatal error when class definition of metadata is missing and skip copying over metadata entries that fail to unserialize
 
 === 1.6 ===
 * Updated functions to handle post ID references correctly and ensure "Republication Date" column appears for all post types
