@@ -50,6 +50,9 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 
 == Changelog ==
 
+=== 1.5 ===
+* Updated meta field references during republication to handle original post ID correctly
+
 === 1.4 ===
 * Copy all meta fields dynamically for maximum compatibility with custom fields, WooCommerce products, etc.
 
