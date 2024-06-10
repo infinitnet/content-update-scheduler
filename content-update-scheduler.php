@@ -145,7 +145,7 @@ class ContentUpdateScheduler
             $stamp = get_post_meta(absint(wp_unslash($_REQUEST['postid'])), self::$_cus_publish_status . '_pubdate', true); // WPCS: CSRF okay.
             if ($stamp) {
                 $str  = '<div style="margin-left:20px">';
-                $str .= TaoPublish::get_pubdate($stamp);
+                $str .= self::get_pubdate($stamp);
                 $str .= '</div>';
                 die($str); // WPCS: XSS okay.
             }
@@ -706,7 +706,7 @@ class ContentUpdateScheduler
             $pub = ContentUpdateScheduler::$_cus_publish_status . '_pubdate';
             $stampchange = false;
 
-            if (isset($_POST[ $nonce ]) && wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[ $nonce ])), basename(__FILE__)) !== 1) {
+            if (!isset($_POST[ $nonce ]) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[ $nonce ])), basename(__FILE__))) {
                 return $post_id;
             }
             if (! current_user_can(get_post_type_object($post->post_type)->cap->edit_post, $post_id)) {
@@ -767,7 +767,7 @@ class ContentUpdateScheduler
          * @param WP_post $orig the original post.
          */
         do_action('ContentUpdateScheduler\\before_publish_post', $post, $orig);
-        delete_post_meta($post->ID, self::$_cus_publish_status . '_pubdate');
+        delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
         // Copy meta and terms, restoring references to the original post ID
         self::copy_meta_and_terms($post->ID, $orig->ID, true);
 
