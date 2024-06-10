@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 3.7.0
 Tested up to: 6.5.4
-Stable tag: 1.3
+Stable tag: 1.4
 Requires PHP: 5.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -50,15 +50,18 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 
 == Changelog ==
 
-== 1.3 ==
+=== 1.4 ===
+* Copy all meta fields dynamically for maximum compatibility with custom fields, WooCommerce products, etc.
+
+=== 1.3 ===
 * Elementor compatibility: Updated handling of Elementor CSS and added meta data copying
 
-== 1.2 ==
+=== 1.2 ===
 * Fixed the incorrect usage of action and filter hooks
 * Moved CSS output to admin_head action to avoid 'header already sent' error
 * Ensured all meta fields are correctly copied when creating the republication draft for WooCommerce variable products
 
-= 1.1 =
+=== 1.1 ===
 * Pull request #4 from Immediate Media merged (Github)
 * Use local WordPress time zone instead of UTC+1
 * Retain original post author
@@ -68,5 +71,5 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 * Simplified the checkTime function in js/publish-datepicker.js
 * Wrapped wp_get_current_user() call in a conditional to check if the user is logged in
 
-= 1.0 =
+=== 1.0 ===
 * First version.
