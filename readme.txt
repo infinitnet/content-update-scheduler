@@ -27,7 +27,7 @@ WordPress lacks the ability to schedule content updates. Keeping your posts and 
 * Lightweight code
 
 == Credits ==
-Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned [tao-schedule-update](https://github.com/tao-software/tao-schedule-update) plugin. Major contributions by [Immediate Media](https://immediate.co.uk/)
+Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned [tao-schedule-update](https://github.com/tao-software/tao-schedule-update) plugin. Major contributions by [Immediate Media](https://immediate.co.uk/).
 
 **Github:** [https://github.com/infinitnet/content-update-scheduler/](https://github.com/infinitnet/content-update-scheduler/)
 
