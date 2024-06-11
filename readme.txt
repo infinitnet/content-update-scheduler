@@ -50,6 +50,9 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 
 == Changelog ==
 
+=== 1.8 ===
+* Various bug fixes
+
 === 1.7 ===
 * Fixed fatal error when class definition of metadata is missing and skip copying over metadata entries that fail to unserialize
 
