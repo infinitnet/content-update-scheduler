@@ -91,7 +91,18 @@ class ContentUpdateScheduler
             // Copy variation meta data
             $meta_data = get_post_meta($variation->ID);
             foreach ($meta_data as $key => $value) {
-                update_post_meta($new_variation_id, $key, maybe_unserialize($value[0]));
+                // Ensure stock status is correctly copied
+                if ($key === '_stock_status') {
+                    update_post_meta($new_variation_id, $key, maybe_unserialize($value[0]));
+                } else {
+                    update_post_meta($new_variation_id, $key, maybe_unserialize($value[0]));
+                }
+            }
+
+            // Ensure stock quantity is correctly copied
+            $stock_quantity = get_post_meta($variation->ID, '_stock', true);
+            if ($stock_quantity !== '') {
+                update_post_meta($new_variation_id, '_stock', $stock_quantity);
             }
         }
     }
