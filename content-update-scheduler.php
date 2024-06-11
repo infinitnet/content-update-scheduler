@@ -20,6 +20,72 @@
 class ContentUpdateScheduler
 {
     /**
+     * Copies grouped products from one product to another.
+     *
+     * @param int $source_product_id      The product from which to copy grouped products.
+     * @param int $destination_product_id The product which will get the grouped products.
+     *
+     * @return void
+     */
+    private static function copy_grouped_products($source_product_id, $destination_product_id)
+    {
+        $grouped_products = get_post_meta($source_product_id, '_children', true);
+        if (!empty($grouped_products)) {
+            update_post_meta($destination_product_id, '_children', $grouped_products);
+        }
+    }
+
+    /**
+     * Copies external product data from one product to another.
+     *
+     * @param int $source_product_id      The product from which to copy external product data.
+     * @param int $destination_product_id The product which will get the external product data.
+     *
+     * @return void
+     */
+    private static function copy_external_product($source_product_id, $destination_product_id)
+    {
+        $product_url = get_post_meta($source_product_id, '_product_url', true);
+        $button_text = get_post_meta($source_product_id, '_button_text', true);
+
+        if (!empty($product_url)) {
+            update_post_meta($destination_product_id, '_product_url', $product_url);
+        }
+        if (!empty($button_text)) {
+            update_post_meta($destination_product_id, '_button_text', $button_text);
+        }
+    }
+
+    /**
+     * Copies simple product data from one product to another.
+     *
+     * @param int $source_product_id      The product from which to copy simple product data.
+     * @param int $destination_product_id The product which will get the simple product data.
+     *
+     * @return void
+     */
+    private static function copy_simple_product($source_product_id, $destination_product_id)
+    {
+        $regular_price = get_post_meta($source_product_id, '_regular_price', true);
+        $sale_price = get_post_meta($source_product_id, '_sale_price', true);
+        $stock_status = get_post_meta($source_product_id, '_stock_status', true);
+        $stock_quantity = get_post_meta($source_product_id, '_stock', true);
+
+        if (!empty($regular_price)) {
+            update_post_meta($destination_product_id, '_regular_price', $regular_price);
+        }
+        if (!empty($sale_price)) {
+            update_post_meta($destination_product_id, '_sale_price', $sale_price);
+        }
+        if (!empty($stock_status)) {
+            update_post_meta($destination_product_id, '_stock_status', $stock_status);
+        }
+        if (!empty($stock_quantity)) {
+            update_post_meta($destination_product_id, '_stock', $stock_quantity);
+        }
+    }
+
+    /**
      * Handles the CSS copying for Elementor and Oxygen plugins.
      *
      * @param int $source_post_id The source post ID.
@@ -669,11 +735,19 @@ class ContentUpdateScheduler
         // and finally referencing the original post.
         update_post_meta($new_post_id, self::$_cus_publish_status . '_original', $original);
 
-        // Handle WooCommerce variable products
+        // Handle WooCommerce products
         if (class_exists('WooCommerce') && $post->post_type === 'product') {
             $product = wc_get_product($post->ID);
-            if ($product && $product->is_type('variable')) {
-                self::copy_product_variations($post->ID, $new_post_id);
+            if ($product) {
+                if ($product->is_type('variable')) {
+                    self::copy_product_variations($post->ID, $new_post_id);
+                } elseif ($product->is_type('grouped')) {
+                    self::copy_grouped_products($post->ID, $new_post_id);
+                } elseif ($product->is_type('external')) {
+                    self::copy_external_product($post->ID, $new_post_id);
+                } else {
+                    self::copy_simple_product($post->ID, $new_post_id);
+                }
             }
         }
 
