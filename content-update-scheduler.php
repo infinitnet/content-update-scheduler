@@ -706,14 +706,26 @@ class ContentUpdateScheduler
             foreach ($values as $value) {
                 foreach ($values as $value) {
                     if (is_serialized($value)) {
-                        $value = maybe_unserialize($value);
+                        $value = preg_replace_callback('/O:\d+:"([^"]+)"/', function ($matches) {
+                            return class_exists($matches[1]) ? $matches[0] : 'O:8:"stdClass"';
+                        }, $value);
+                        
+                        $unserialized_value = maybe_unserialize($value);
+                        
+                        if (is_string($unserialized_value) && strpos($unserialized_value, 'O:8:"stdClass"') !== false) {
+                            // Skip this meta entry if it contains undefined objects
+                            error_log('Skipping meta entry for key: ' . $key . '. Unserialized value contains undefined objects.');
+                            continue 2;
+                        }
+                    } else {
+                        $unserialized_value = $value;
                     }
                     
-                    if ($restore_references && is_string($value) && strpos($value, (string)$source_post->ID) !== false) {
-                        $value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $value);
+                    if ($restore_references && is_string($unserialized_value) && strpos($unserialized_value, (string)$source_post->ID) !== false) {
+                        $unserialized_value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $unserialized_value);
                     }
                     
-                    add_post_meta($destination_post->ID, $key, maybe_serialize($value));
+                    add_post_meta($destination_post->ID, $key, maybe_serialize($unserialized_value));
                 }
             }
         }
