@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 3.7.0
 Tested up to: 6.5.4
-Stable tag: 1.7
+Stable tag: 1.8
 Requires PHP: 5.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -49,6 +49,9 @@ Each page and post has a 'Schedule Content Update' link in the overview, which a
 Yes, it has been tested with Elementor and Oxygen Builder. It may also work with other page builders.
 
 == Changelog ==
+
+=== 1.8 ===
+* Various bug fixes
 
 === 1.7 ===
 * Fixed fatal error when class definition of metadata is missing and skip copying over metadata entries that fail to unserialize
