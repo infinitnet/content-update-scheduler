@@ -157,21 +157,19 @@ class ContentUpdateScheduler
             // Copy variation meta data
             $meta_data = get_post_meta($variation->ID);
             foreach ($meta_data as $key => $value) {
-                // Ensure stock status is correctly copied
-                if ($key === '_stock_status') {
-                    update_post_meta($new_variation_id, $key, maybe_unserialize($value[0]));
-                } else {
-                    update_post_meta($new_variation_id, $key, maybe_unserialize($value[0]));
-                }
+                update_post_meta($new_variation_id, $key, maybe_unserialize($value[0]));
             }
 
-            // Adjust stock quantity to reflect any changes since the original product was created
+            // Ensure stock status and stock quantity are correctly copied
+            $original_stock_status = get_post_meta($variation->ID, '_stock_status', true);
             $original_stock_quantity = get_post_meta($variation->ID, '_stock', true);
-            $current_stock_quantity = get_post_meta($new_variation_id, '_stock', true);
+
+            if ($original_stock_status !== '') {
+                update_post_meta($new_variation_id, '_stock_status', $original_stock_status);
+            }
 
             if ($original_stock_quantity !== '') {
-                $adjusted_stock_quantity = max(0, $original_stock_quantity - ($current_stock_quantity - $original_stock_quantity));
-                update_post_meta($new_variation_id, '_stock', $adjusted_stock_quantity);
+                update_post_meta($new_variation_id, '_stock', $original_stock_quantity);
             }
         }
     }
