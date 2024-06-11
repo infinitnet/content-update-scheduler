@@ -39,7 +39,13 @@ class ContentUpdateScheduler
                 copy($source_css, $destination_css);
             }
 
+            add_filter('manage_edit-' . $post_type . '_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
+            add_action('manage_' . $post_type . '_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
         }
+
+        // Ensure the column is added for WooCommerce products
+        add_filter('manage_edit-product_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
+        add_action('manage_product_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
 
         // Oxygen plugin active.
         if (in_array('oxygen/functions.php', apply_filters('active_plugins', get_option('active_plugins')))) {
