@@ -99,10 +99,13 @@ class ContentUpdateScheduler
                 }
             }
 
-            // Ensure stock quantity is correctly copied
-            $stock_quantity = get_post_meta($variation->ID, '_stock', true);
-            if ($stock_quantity !== '') {
-                update_post_meta($new_variation_id, '_stock', $stock_quantity);
+            // Adjust stock quantity to reflect any changes since the original product was created
+            $original_stock_quantity = get_post_meta($variation->ID, '_stock', true);
+            $current_stock_quantity = get_post_meta($new_variation_id, '_stock', true);
+
+            if ($original_stock_quantity !== '') {
+                $adjusted_stock_quantity = max(0, $original_stock_quantity - ($current_stock_quantity - $original_stock_quantity));
+                update_post_meta($new_variation_id, '_stock', $adjusted_stock_quantity);
             }
         }
     }
