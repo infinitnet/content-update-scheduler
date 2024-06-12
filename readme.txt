@@ -35,14 +35,14 @@ Developed by [Infinitnet](https://infinitnet.io/) and based on the abandoned [ta
 
 1. Upload the plugin files to the `/wp-content/plugins/content-update-scheduler` directory, or install the plugin through the WordPress plugins screen directly.
 2. Activate the plugin through the 'Plugins' screen in WordPress
-3. Each page and post now has a 'Schedule Content Update' link where you can schedule the content updates. Click on it.
+3. Each page and post now has a 'Scheduled Content Update' link where you can schedule the content updates. Click on it.
 4. Select the date and time in the new 'Scheduled Content Update' meta box on 'Page' level and then click 'Publish' to schedule it.
 
 == Frequently Asked Questions ==
 
 = How do I schedule a content update?
 
-Each page and post has a 'Schedule Content Update' link in the overview, which allows you to schedule content updates. Click on it. Then select the date and time in the new 'Scheduled Content Update' meta box on 'Page' level and then click 'Publish' to schedule it.
+Each page and post has a 'Scheduled Content Update' link in the overview, which allows you to schedule content updates. Click on it. Then select the date and time in the new 'Scheduled Content Update' meta box on 'Page' level and then click 'Publish' to schedule it.
 
 = Does this work with page builders?
 

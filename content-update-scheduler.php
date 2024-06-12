@@ -180,7 +180,7 @@ class ContentUpdateScheduler
      * @access public
      * @var string
      */
-    public static $cus_publish_label         = 'Schedule Content Update';
+    public static $cus_publish_label         = 'Scheduled Content Update';
 
     /**
      * Title for the Publish Metabox
@@ -211,7 +211,7 @@ class ContentUpdateScheduler
         require_once dirname(__FILE__) . '/options.php';
 
         self::load_plugin_textdomain();
-        self::$cus_publish_label   = __('Schedule Content Update', 'cus-scheduleupdate-td');
+        self::$cus_publish_label   = __('Scheduled Content Update', 'cus-scheduleupdate-td');
         self::$_cus_publish_metabox = __('Scheduled Content Update', 'cus-scheduleupdate-td');
         self::register_post_status();
 
