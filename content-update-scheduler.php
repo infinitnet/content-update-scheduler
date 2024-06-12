@@ -70,6 +70,8 @@ class ContentUpdateScheduler
         $sale_price = get_post_meta($source_product_id, '_sale_price', true);
         $stock_status = get_post_meta($source_product_id, '_stock_status', true);
         $stock_quantity = get_post_meta($source_product_id, '_stock', true);
+        $manage_stock = get_post_meta($source_product_id, '_manage_stock', true);
+        $backorders = get_post_meta($source_product_id, '_backorders', true);
 
         if (!empty($regular_price)) {
             update_post_meta($destination_product_id, '_regular_price', $regular_price);
@@ -79,6 +81,8 @@ class ContentUpdateScheduler
         }
         update_post_meta($destination_product_id, '_stock_status', $stock_status);
         update_post_meta($destination_product_id, '_stock', $stock_quantity);
+        update_post_meta($destination_product_id, '_manage_stock', $manage_stock);
+        update_post_meta($destination_product_id, '_backorders', $backorders);
     }
 
     /**
