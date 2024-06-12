@@ -903,8 +903,8 @@ class ContentUpdateScheduler
         }
 
         $post = get_post($post_id);
-        $original_stock_status = get_post_meta($post->ID, '_stock_status', true);
-        $original_stock_quantity = get_post_meta($post->ID, '_stock', true);
+        $original_stock_status = get_post_meta($orig->ID, '_stock_status', true);
+        $original_stock_quantity = get_post_meta($orig->ID, '_stock', true);
 
         self::handle_plugin_css_copy($post->ID, $orig_id);
 
