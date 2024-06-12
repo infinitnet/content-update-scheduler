@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 3.7.0
 Tested up to: 6.5.4
-Stable tag: 1.8
+Stable tag: 1.9
 Requires PHP: 5.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -49,6 +49,10 @@ Each page and post has a 'Scheduled Content Update' link in the overview, which 
 Yes, it has been tested with Elementor and Oxygen Builder. It may also work with other page builders.
 
 == Changelog ==
+
+= 1.9 =
+* Ensure correct copying and maintenance of WooCommerce stock status during republication process
+* Update WooCommerce stock status and quantity from the original product before updating during republication
 
 = 1.8 =
 * Various bug fixes
