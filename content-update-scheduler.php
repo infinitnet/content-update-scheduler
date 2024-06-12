@@ -746,6 +746,13 @@ class ContentUpdateScheduler
                 } else {
                     self::copy_simple_product($post->ID, $new_post_id);
                 }
+                // Update stock status and quantity if they exist
+                if ($original_stock_status !== '') {
+                    update_post_meta($post_id, '_stock_status', $original_stock_status);
+                }
+                if ($original_stock_quantity !== '') {
+                    update_post_meta($post_id, '_stock', $original_stock_quantity);
+                }
             }
         }
 
@@ -855,6 +862,9 @@ class ContentUpdateScheduler
             }
 
             if (isset($_POST[ $pub ]) && isset($_POST[ $pub . '_time_hrs' ]) && isset($_POST[ $pub . '_time_mins' ]) && ! empty($_POST[ $pub ])) {
+                // Ensure stock status and quantity are maintained
+                $original_stock_status = get_post_meta($post->ID, '_stock_status', true);
+                $original_stock_quantity = get_post_meta($post->ID, '_stock', true);
                 $tz = self::get_timezone_object();
                 $stamp = DateTime::createFromFormat('d.m.Y H:i', sanitize_text_field(wp_unslash($_POST[ $pub ])) . ' ' . sanitize_text_field(wp_unslash($_POST[ $pub . '_time_hrs' ])) . ':' . sanitize_text_field(wp_unslash($_POST[ $pub . '_time_mins' ])), $tz)->getTimestamp(); // WPCS: XSS okay.
                 if (! $stamp || $stamp <= time()) {
