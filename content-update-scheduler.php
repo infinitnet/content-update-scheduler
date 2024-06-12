@@ -892,6 +892,21 @@ class ContentUpdateScheduler
                     ));
                 }
             }
+
+            // Check if the post being saved is a republication draft
+            $original_post_id = get_post_meta($post_id, self::$_cus_publish_status . '_original', true);
+            if ($original_post_id) {
+                // Ensure the original post's stock status and quantity are maintained
+                $original_stock_status = get_post_meta($original_post_id, '_stock_status', true);
+                $original_stock_quantity = get_post_meta($original_post_id, '_stock', true);
+
+                if ($original_stock_status !== '') {
+                    update_post_meta($post_id, '_stock_status', $original_stock_status);
+                }
+                if ($original_stock_quantity !== '') {
+                    update_post_meta($post_id, '_stock', $original_stock_quantity);
+                }
+            }
         }
     }
 
