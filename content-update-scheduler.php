@@ -903,6 +903,8 @@ class ContentUpdateScheduler
         }
 
         $post = get_post($post_id);
+        $original_stock_status = get_post_meta($post->ID, '_stock_status', true);
+        $original_stock_quantity = get_post_meta($post->ID, '_stock', true);
 
         self::handle_plugin_css_copy($post->ID, $orig_id);
 
@@ -940,6 +942,14 @@ class ContentUpdateScheduler
         //delete_post_meta( $orig->ID, self::$_cus_publish_status . '_pubdate' );
 
         $result = wp_update_post($post, true);
+        if (!is_wp_error($result)) {
+            if ($original_stock_status !== '') {
+                update_post_meta($post->ID, '_stock_status', $original_stock_status);
+            }
+            if ($original_stock_quantity !== '') {
+                update_post_meta($post->ID, '_stock', $original_stock_quantity);
+            }
+        }
         if (is_wp_error($result)) {
             return $result;
         }
