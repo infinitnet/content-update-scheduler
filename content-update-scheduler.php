@@ -160,7 +160,7 @@ class ContentUpdateScheduler
                 update_post_meta($new_variation_id, $key, maybe_unserialize($value[0]));
             }
 
-            // Ensure stock status and stock quantity are correctly copied
+            // Ensure stock status, stock quantity, manage stock, and backorders are correctly copied
             $original_stock_status = get_post_meta($variation->ID, '_stock_status', true);
             $original_stock_quantity = get_post_meta($variation->ID, '_stock', true);
             $original_manage_stock = get_post_meta($variation->ID, '_manage_stock', true);
@@ -179,7 +179,7 @@ class ContentUpdateScheduler
             }
             
             if ($original_backorders !== '') {
-                update_post_meta($new_variation_id, '_backorders', $original_backorders);  
+                update_post_meta($new_variation_id, '_backorders', $original_backorders);
             }
         }
     }
