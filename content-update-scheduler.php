@@ -77,12 +77,8 @@ class ContentUpdateScheduler
         if (!empty($sale_price)) {
             update_post_meta($destination_product_id, '_sale_price', $sale_price);
         }
-        if (!empty($stock_status)) {
-            update_post_meta($destination_product_id, '_stock_status', $stock_status);
-        }
-        if (!empty($stock_quantity)) {
-            update_post_meta($destination_product_id, '_stock', $stock_quantity);
-        }
+        update_post_meta($destination_product_id, '_stock_status', $stock_status);
+        update_post_meta($destination_product_id, '_stock', $stock_quantity);
     }
 
     /**
