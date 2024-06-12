@@ -51,7 +51,7 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 == Changelog ==
 
 = 1.9 =
-* Ensure correct copying and maintenance of WooCommerce stock status during republication process
+* Ensure correct copying and maintenance of WooCommerce stock status during republication process and when saving the republication draft
 * Update WooCommerce stock status and quantity from the original product before updating during republication
 
 = 1.8 =
