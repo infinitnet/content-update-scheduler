@@ -41,15 +41,16 @@ CUSScheduleUpdate.checkTime = function() {
 	var timeHour = $( '#cus_sc_publish_pubdate_time' ).val();
 	var timeMin = $( 'select[name=cus_sc_publish_pubdate_time_mins]' ).val();
 	
-	var selectedDateTime = new Date(dateString + ' ' + timeHour + ':' + timeMin);
-	
-	// Adjust for WordPress timezone
-	selectedDateTime.setMinutes(selectedDateTime.getMinutes() - offsetMins);
-	now.setMinutes(now.getMinutes() - offsetMins);
+    var dateParts = dateString.split('.');
+    var selectedDateTime = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeHour, timeMin);
 
-	if (now > selectedDateTime) {
-		$( '#pastmsg' ).show();
-	} else {
-		$( '#pastmsg' ).hide(); 
-	}
+    // Adjust for WordPress timezone
+    selectedDateTime.setMinutes(selectedDateTime.getMinutes() - offsetMins);
+    now.setMinutes(now.getMinutes() - offsetMins);
+
+    if (now > selectedDateTime) {
+        $('#pastmsg').show();
+    } else {
+        $('#pastmsg').hide();
+    }
 };
