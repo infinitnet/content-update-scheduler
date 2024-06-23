@@ -1130,7 +1130,10 @@ class ContentUpdateScheduler
 
         if (!current_user_can('administrator')) {
             $cus_sc_publish_pubdate = get_post_meta($post->ID, 'cus_sc_publish_pubdate', true);
-            if (!empty($cus_sc_publish_pubdate) && $cus_sc_publish_pubdate > current_time('timestamp')) {
+            $original_post_id = get_post_meta($post->ID, self::$_cus_publish_status . '_original', true);
+            
+            // Check if the post is a scheduled update and its publication time has passed
+            if (!empty($cus_sc_publish_pubdate) && $cus_sc_publish_pubdate > current_time('timestamp') && empty($original_post_id)) {
                 global $wp_query;
                 $wp_query->set_404();
                 status_header(404);
