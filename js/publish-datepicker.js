@@ -30,7 +30,7 @@ CUSScheduleUpdate.checkTime = function() {
     var $ = jQuery;
 
     var now = new Date();
-    var siteOffset = CUSScheduleUpdate.siteTimezoneOffset || 0; // Get site's timezone offset
+    var siteTimezone = CUSScheduleUpdate.siteTimezone;
     var dateString = $('#' + CUSScheduleUpdate.datepicker.elementid).val();
     var timeHour = $('#cus_sc_publish_pubdate_time').val();
     var timeMin = $('select[name=cus_sc_publish_pubdate_time_mins]').val();
@@ -38,8 +38,8 @@ CUSScheduleUpdate.checkTime = function() {
     var dateParts = dateString.split('.');
     var selectedDateTime = new Date(dateParts[2], dateParts[1] - 1, dateParts[0], timeHour, timeMin);
 
-    // Adjust the selected date/time to the site's timezone
-    var siteTime = new Date(selectedDateTime.getTime() + (siteOffset * 60 * 1000));
+    // Convert the selected date/time to the site's timezone
+    var siteTime = new Date(selectedDateTime.toLocaleString('en-US', { timeZone: siteTimezone }));
 
     if (now > siteTime) {
         $('#pastmsg').show();

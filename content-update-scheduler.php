@@ -535,7 +535,7 @@ class ContentUpdateScheduler
             'text' => array(
                 'save' => __('Save'),
             ),
-            'siteTimezoneOffset' => $site_offset,
+            'siteTimezone' => self::get_timezone_string(),
         );
 
         wp_localize_script(self::$_cus_publish_status . '-datepicker.js', 'CUSScheduleUpdate', $js_data);
