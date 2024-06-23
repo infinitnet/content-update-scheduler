@@ -634,13 +634,17 @@ class ContentUpdateScheduler
         }
 
         if (empty($tzstring)) { // Create a UTC+- zone if no timezone string exists.
-            if (0 === $current_offset) {
-                $tzstring = 'UTC+0';
-            } elseif ($current_offset < 0) {
-                $tzstring = 'UTC' . $current_offset;
-            } else {
-                $tzstring = 'UTC+' . $current_offset;
-            }
+            $offset_string = sprintf('%+d', $current_offset);
+            $offset_string = str_replace(array('.25', '.5', '.75'), array(':15', ':30', ':45'), $offset_string);
+            $tzstring = 'UTC' . $offset_string;
+        }
+
+        // Attempt to create a DateTimeZone object to validate the timezone string
+        try {
+            new DateTimeZone($tzstring);
+        } catch (Exception $e) {
+            // If the timezone string is invalid, fall back to UTC
+            $tzstring = 'UTC';
         }
 
         return $tzstring;
