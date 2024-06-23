@@ -519,6 +519,11 @@ class ContentUpdateScheduler
             $df
         );
 
+        // Get the site's timezone offset
+        $timezone = self::get_timezone_string();
+        $site_timezone = new DateTimeZone($timezone);
+        $site_offset = $site_timezone->getOffset(new DateTime("now", new DateTimeZone('UTC'))) / 60;
+
         $js_data = array(
             'datepicker' => array(
                 'daynames'   => $days,
@@ -530,6 +535,7 @@ class ContentUpdateScheduler
             'text' => array(
                 'save' => __('Save'),
             ),
+            'siteTimezoneOffset' => $site_offset,
         );
 
         wp_localize_script(self::$_cus_publish_status . '-datepicker.js', 'CUSScheduleUpdate', $js_data);
