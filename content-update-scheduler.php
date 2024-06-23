@@ -862,35 +862,46 @@ class ContentUpdateScheduler
         if ($post->post_status === self::$_cus_publish_status || get_post_meta($post_id, self::$_cus_publish_status . '_original', true)) {
             $nonce = ContentUpdateScheduler::$_cus_publish_status . '_nonce';
             $pub = ContentUpdateScheduler::$_cus_publish_status . '_pubdate';
-            $stampchange = false;
 
-            if (!isset($_POST[ $nonce ]) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[ $nonce ])), basename(__FILE__))) {
+            if (!isset($_POST[$nonce]) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[$nonce])), basename(__FILE__))) {
                 return $post_id;
             }
-            if (! current_user_can(get_post_type_object($post->post_type)->cap->edit_post, $post_id)) {
+            if (!current_user_can(get_post_type_object($post->post_type)->cap->edit_post, $post_id)) {
                 return $post_id;
             }
 
-            if (isset($_POST[ $pub ]) && isset($_POST[ $pub . '_time_hrs' ]) && isset($_POST[ $pub . '_time_mins' ]) && ! empty($_POST[ $pub ])) {
-                // Ensure stock status and quantity are maintained
-                $original_stock_status = get_post_meta($post->ID, '_stock_status', true);
-                $original_stock_quantity = get_post_meta($post->ID, '_stock', true);
+            if (isset($_POST[$pub]) && isset($_POST[$pub . '_time_hrs']) && isset($_POST[$pub . '_time_mins']) && !empty($_POST[$pub])) {
                 $tz = self::get_timezone_object();
-                $stamp = DateTime::createFromFormat('d.m.Y H:i', sanitize_text_field(wp_unslash($_POST[ $pub ])) . ' ' . sanitize_text_field(wp_unslash($_POST[ $pub . '_time_hrs' ])) . ':' . sanitize_text_field(wp_unslash($_POST[ $pub . '_time_mins' ])), $tz)->getTimestamp(); // WPCS: XSS okay.
-                if (! $stamp || $stamp <= time()) {
-                    $stamp = strtotime('+5 minutes');
-                    $stampchange = true;
+                $date_string = sanitize_text_field(wp_unslash($_POST[$pub]));
+                $time_hrs = sanitize_text_field(wp_unslash($_POST[$pub . '_time_hrs']));
+                $time_mins = sanitize_text_field(wp_unslash($_POST[$pub . '_time_mins']));
+
+                // Parse the date string
+                $date_parts = explode('.', $date_string);
+                if (count($date_parts) !== 3) {
+                    // Invalid date format
+                    return $post_id;
                 }
 
-                wp_clear_scheduled_hook('cus_publish_post', array(
-                    $post_id,
-                ));
-                if (! $stampchange || ContentUpdateScheduler_Options::get('tsu_nodate') === 'publish') {
-                    update_post_meta($post_id, $pub, $stamp);
-                    wp_schedule_single_event($stamp, 'cus_publish_post', array(
-                        $post_id,
-                    ));
+                $year = intval($date_parts[2]);
+                $month = intval($date_parts[1]);
+                $day = intval($date_parts[0]);
+
+                // Create DateTime object
+                $date_time = new DateTime();
+                $date_time->setTimezone($tz);
+                $date_time->setDate($year, $month, $day);
+                $date_time->setTime(intval($time_hrs), intval($time_mins));
+
+                $stamp = $date_time->getTimestamp();
+
+                if ($stamp <= time()) {
+                    $stamp = time() + 300; // 5 minutes from now
                 }
+
+                wp_clear_scheduled_hook('cus_publish_post', array($post_id));
+                update_post_meta($post_id, $pub, $stamp);
+                wp_schedule_single_event($stamp, 'cus_publish_post', array($post_id));
             }
 
             // Check if the post being saved is a republication draft
