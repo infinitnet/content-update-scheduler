@@ -1112,7 +1112,6 @@ class ContentUpdateScheduler
 
     public static function user_restriction_scheduled_content()
     {
-        //ini_set('memory_limit', '256M');
         global $post;
 
         if (!$post instanceof WP_Post) {
@@ -1121,21 +1120,12 @@ class ContentUpdateScheduler
 
         if (!current_user_can('administrator')) {
             $cus_sc_publish_pubdate = get_post_meta($post->ID, 'cus_sc_publish_pubdate', true);
-            if (!empty($cus_sc_publish_pubdate)) {
+            if (!empty($cus_sc_publish_pubdate) && $cus_sc_publish_pubdate > current_time('timestamp')) {
                 global $wp_query;
                 $wp_query->set_404();
                 status_header(404);
                 get_template_part(404);
-                //wp_redirect( esc_url(get_permalink($post->post_parent))
                 exit();
-                /*if (!empty($post->post_parent) && get_post_status($post->post_parent) != 'publish') {
-                    global $wp_query;
-                    $wp_query->set_404();
-                    status_header(404);
-                    get_template_part(404);
-                    //wp_redirect( esc_url(get_permalink($post->post_parent))
-                    exit();
-                }*/
             }
         }
     }
@@ -1169,3 +1159,10 @@ add_action('admin_footer', function (){ ?>
 });
 
 add_filter('template_redirect', array( 'ContentUpdateScheduler', 'user_restriction_scheduled_content' ), 1);
+
+register_deactivation_hook(__FILE__, 'cus_deactivation');
+
+function cus_deactivation() {
+    global $wpdb;
+    $wpdb->query("DELETE FROM $wpdb->postmeta WHERE meta_key = 'cus_sc_publish_pubdate'");
+}
