@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 3.7.0
 Tested up to: 6.5.4
-Stable tag: 2.1
+Stable tag: 2.2
 Requires PHP: 5.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -49,6 +49,10 @@ Each page and post has a 'Scheduled Content Update' link in the overview, which 
 Yes, it has been tested with Elementor and Oxygen Builder. It may also work with other page builders.
 
 == Changelog ==
+
+= 2.2 =
+* Improved fix for 404 issue
+* Date picker timezone is now always the site's timezone
 
 = 2.1 =
 * Fixed 404 error for republished posts: Removed unused code, added check for scheduled publish date, and added deactivation hook to remove custom post meta.
