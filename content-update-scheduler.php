@@ -528,7 +528,16 @@ class ContentUpdateScheduler
         if ($stamp) {
             $date = wp_date('Y-m-d', $stamp);
             $time = wp_date('H:i', $stamp);
+        } else {
+            // Set default date to tomorrow
+            $date = wp_date('Y-m-d', strtotime('+1 day'));
+            $time = '00:00';
         }
+
+        $date_parts = explode('-', $date);
+        $year = $date_parts[0];
+        $month = $date_parts[1];
+        $day = $date_parts[2];
 
         ?>
         <div class="block-editor-publish-date-time-picker">
@@ -543,15 +552,15 @@ class ContentUpdateScheduler
                             'January', 'February', 'March', 'April', 'May', 'June',
                             'July', 'August', 'September', 'October', 'November', 'December'
                         );
-                        foreach ($months as $index => $month) {
+                        foreach ($months as $index => $month_name) {
                             $month_number = $index + 1;
-                            $selected = ($month_number == date('n', $stamp)) ? 'selected' : '';
-                            echo '<option value="' . esc_attr($month_number) . '" ' . $selected . '>' . esc_html__($month, 'cus-scheduleupdate-td') . '</option>';
+                            $selected = ($month_number == intval($month)) ? 'selected' : '';
+                            echo '<option value="' . esc_attr($month_number) . '" ' . $selected . '>' . esc_html__($month_name, 'cus-scheduleupdate-td') . '</option>';
                         }
                         ?>
                     </select>
-                    <input type="number" name="<?php echo esc_attr($metaname); ?>_day" id="<?php echo esc_attr($metaname); ?>_day" min="1" max="31" value="<?php echo esc_attr(date('j', $stamp)); ?>" />
-                    <input type="number" name="<?php echo esc_attr($metaname); ?>_year" id="<?php echo esc_attr($metaname); ?>_year" min="<?php echo esc_attr(date('Y')); ?>" value="<?php echo esc_attr(date('Y', $stamp)); ?>" />
+                    <input type="number" name="<?php echo esc_attr($metaname); ?>_day" id="<?php echo esc_attr($metaname); ?>_day" min="1" max="31" value="<?php echo esc_attr($day); ?>" />
+                    <input type="number" name="<?php echo esc_attr($metaname); ?>_year" id="<?php echo esc_attr($metaname); ?>_year" min="<?php echo esc_attr(date('Y')); ?>" value="<?php echo esc_attr($year); ?>" />
                 </div>
                 <div class="components-datetime__time">
                     <input type="time" name="<?php echo esc_attr($metaname); ?>_time" id="<?php echo esc_attr($metaname); ?>_time" value="<?php echo esc_attr($time); ?>" />
