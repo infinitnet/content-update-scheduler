@@ -567,10 +567,30 @@ class ContentUpdateScheduler
                 dayNames: ['<?php echo esc_js(__('Sunday')); ?>', '<?php echo esc_js(__('Monday')); ?>', '<?php echo esc_js(__('Tuesday')); ?>', '<?php echo esc_js(__('Wednesday')); ?>', '<?php echo esc_js(__('Thursday')); ?>', '<?php echo esc_js(__('Friday')); ?>', '<?php echo esc_js(__('Saturday')); ?>'],
                 dayNamesShort: ['<?php echo esc_js(_x('Sun', 'Sunday abbreviation')); ?>', '<?php echo esc_js(_x('Mon', 'Monday abbreviation')); ?>', '<?php echo esc_js(_x('Tue', 'Tuesday abbreviation')); ?>', '<?php echo esc_js(_x('Wed', 'Wednesday abbreviation')); ?>', '<?php echo esc_js(_x('Thu', 'Thursday abbreviation')); ?>', '<?php echo esc_js(_x('Fri', 'Friday abbreviation')); ?>', '<?php echo esc_js(_x('Sat', 'Saturday abbreviation')); ?>'],
                 dayNamesMin: ['<?php echo esc_js(_x('S', 'Sunday initial')); ?>', '<?php echo esc_js(_x('M', 'Monday initial')); ?>', '<?php echo esc_js(_x('T', 'Tuesday initial')); ?>', '<?php echo esc_js(_x('W', 'Wednesday initial')); ?>', '<?php echo esc_js(_x('T', 'Thursday initial')); ?>', '<?php echo esc_js(_x('F', 'Friday initial')); ?>', '<?php echo esc_js(_x('S', 'Saturday initial')); ?>'],
-                firstDay: <?php echo esc_js(get_option('start_of_week')); ?>
+                firstDay: <?php echo esc_js(get_option('start_of_week')); ?>,
+                beforeShow: function(input, inst) {
+                    $('#ui-datepicker-div').addClass('cus-datepicker');
+                },
+                onClose: function(dateText, inst) {
+                    $('#ui-datepicker-div').removeClass('cus-datepicker');
+                }
+            });
+
+            // Handle the "Today" button click
+            $(document).on('click', '.ui-datepicker-current', function() {
+                var today = new Date();
+                $('#<?php echo esc_js($metaname); ?>').datepicker('setDate', today);
+                return false;
             });
         });
         </script>
+        <style>
+        .cus-datepicker {
+            background-color: #fff;
+            border: 1px solid #ddd;
+            box-shadow: 0 1px 2px rgba(0,0,0,.07);
+        }
+        </style>
         <?php
     }
 
