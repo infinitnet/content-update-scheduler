@@ -14,6 +14,11 @@
  * @package cus
  */
 
+// Enable error logging
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
 /**
  * Content Update Scheduler main class
  */
@@ -875,16 +880,24 @@ class ContentUpdateScheduler
      */
     public static function save_meta($post_id, $post)
     {
+        error_log("save_meta called for post ID: " . $post_id);
+        
         if ($post->post_status === self::$_cus_publish_status || get_post_meta($post_id, self::$_cus_publish_status . '_original', true)) {
             $nonce = ContentUpdateScheduler::$_cus_publish_status . '_nonce';
             $pub = ContentUpdateScheduler::$_cus_publish_status . '_pubdate';
 
+            error_log("Nonce: " . (isset($_POST[$nonce]) ? 'set' : 'not set'));
+            
             if (!isset($_POST[$nonce]) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[$nonce])), basename(__FILE__))) {
+                error_log("Nonce verification failed");
                 return $post_id;
             }
             if (!current_user_can(get_post_type_object($post->post_type)->cap->edit_post, $post_id)) {
+                error_log("User doesn't have permission to edit this post");
                 return $post_id;
             }
+
+            error_log("POST data: " . print_r($_POST, true));
 
             if (isset($_POST[$pub . '_month'], $_POST[$pub . '_day'], $_POST[$pub . '_year'], $_POST[$pub . '_time'])) {
                 $month = intval($_POST[$pub . '_month']);
@@ -892,40 +905,53 @@ class ContentUpdateScheduler
                 $year = intval($_POST[$pub . '_year']);
                 $time = sanitize_text_field($_POST[$pub . '_time']);
 
+                error_log("Date components: Year: $year, Month: $month, Day: $day, Time: $time");
+
                 $tz = wp_timezone();
                 $date_string = sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
                 $date_time = DateTime::createFromFormat('Y-m-d H:i', $date_string, $tz);
 
                 if ($date_time === false) {
-                    // Invalid date format
+                    error_log("Invalid date format: $date_string");
                     return $post_id;
                 }
 
                 $stamp = $date_time->getTimestamp();
 
+                error_log("Calculated timestamp: $stamp");
+
                 if ($stamp <= time()) {
                     $stamp = time() + 300; // 5 minutes from now
+                    error_log("Timestamp was in the past, set to 5 minutes from now: $stamp");
                 }
 
                 wp_clear_scheduled_hook('cus_publish_post', array($post_id));
                 update_post_meta($post_id, $pub, $stamp);
                 wp_schedule_single_event($stamp, 'cus_publish_post', array($post_id));
+                error_log("Scheduled event for timestamp: $stamp");
+            } else {
+                error_log("Date/time POST variables not set");
             }
 
             // Check if the post being saved is a republication draft
             $original_post_id = get_post_meta($post_id, self::$_cus_publish_status . '_original', true);
             if ($original_post_id) {
+                error_log("Handling republication draft. Original post ID: $original_post_id");
                 // Ensure the original post's stock status and quantity are maintained
                 $original_stock_status = get_post_meta($original_post_id, '_stock_status', true);
                 $original_stock_quantity = get_post_meta($original_post_id, '_stock', true);
 
                 if ($original_stock_status !== '') {
                     update_post_meta($post_id, '_stock_status', $original_stock_status);
+                    error_log("Updated stock status: $original_stock_status");
                 }
                 if ($original_stock_quantity !== '') {
                     update_post_meta($post_id, '_stock', $original_stock_quantity);
+                    error_log("Updated stock quantity: $original_stock_quantity");
                 }
             }
+        } else {
+            error_log("Post status is not cus_sc_publish and no original post found");
         }
     }
 
