@@ -526,69 +526,85 @@ class ContentUpdateScheduler
         }
 
         ?>
-        <p>
-            <strong><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></strong>
-        </p>
-        <label class="screen-reader-text" for="<?php echo esc_attr($metaname); ?>"><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></label>
-        <input type="text" class="widefat" name="<?php echo esc_attr($metaname); ?>" id="<?php echo esc_attr($metaname); ?>" value="<?php echo esc_attr($date); ?>" />
-        
-        <p>
-            <strong><?php esc_html_e('Time', 'cus-scheduleupdate-td'); ?></strong>
-        </p>
-        <label class="screen-reader-text" for="<?php echo esc_attr($metaname); ?>_time"><?php esc_html_e('Time', 'cus-scheduleupdate-td'); ?></label>
-        <input type="time" name="<?php echo esc_attr($metaname); ?>_time" id="<?php echo esc_attr($metaname); ?>_time" value="<?php echo esc_attr($time); ?>" />
-        
-        <p>
-            <?php esc_html_e('Please enter Time in the site\'s local timezone', 'cus-scheduleupdate-td'); ?>
-        </p>
-        
-        <p>
-            <div id="pastmsg" style="color:red; display:none;">
-                <?php
-                echo esc_html__('The release date is in the past.', 'cus-scheduleupdate-td');
-                if (ContentUpdateScheduler_Options::get('tsu_nodate') === 'nothing') {
-                    echo esc_html__('This post will not be published.', 'cus-scheduleupdate-td');
-                } else {
-                    echo esc_html__('This post will be published 5 minutes from now.', 'cus-scheduleupdate-td');
-                }
-                ?>
+        <div class="block-editor-publish-date-time-picker">
+            <p>
+                <strong><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></strong>
+            </p>
+            <div class="components-datetime">
+                <div class="components-datetime__date">
+                    <select name="<?php echo esc_attr($metaname); ?>_month" id="<?php echo esc_attr($metaname); ?>_month">
+                        <?php
+                        $months = array(
+                            'January', 'February', 'March', 'April', 'May', 'June',
+                            'July', 'August', 'September', 'October', 'November', 'December'
+                        );
+                        foreach ($months as $index => $month) {
+                            $month_number = $index + 1;
+                            $selected = ($month_number == date('n', $stamp)) ? 'selected' : '';
+                            echo '<option value="' . esc_attr($month_number) . '" ' . $selected . '>' . esc_html__($month, 'cus-scheduleupdate-td') . '</option>';
+                        }
+                        ?>
+                    </select>
+                    <input type="number" name="<?php echo esc_attr($metaname); ?>_day" id="<?php echo esc_attr($metaname); ?>_day" min="1" max="31" value="<?php echo esc_attr(date('j', $stamp)); ?>" />
+                    <input type="number" name="<?php echo esc_attr($metaname); ?>_year" id="<?php echo esc_attr($metaname); ?>_year" min="<?php echo esc_attr(date('Y')); ?>" value="<?php echo esc_attr(date('Y', $stamp)); ?>" />
+                </div>
+                <div class="components-datetime__time">
+                    <input type="time" name="<?php echo esc_attr($metaname); ?>_time" id="<?php echo esc_attr($metaname); ?>_time" value="<?php echo esc_attr($time); ?>" />
+                </div>
             </div>
-        </p>
+            <p>
+                <?php esc_html_e('Please enter Time in the site\'s local timezone', 'cus-scheduleupdate-td'); ?>
+            </p>
+            <p>
+                <div id="pastmsg" style="color:red; display:none;">
+                    <?php
+                    echo esc_html__('The release date is in the past.', 'cus-scheduleupdate-td');
+                    if (ContentUpdateScheduler_Options::get('tsu_nodate') === 'nothing') {
+                        echo esc_html__('This post will not be published.', 'cus-scheduleupdate-td');
+                    } else {
+                        echo esc_html__('This post will be published 5 minutes from now.', 'cus-scheduleupdate-td');
+                    }
+                    ?>
+                </div>
+            </p>
+        </div>
         <script type="text/javascript">
         jQuery(document).ready(function($) {
-            $('#<?php echo esc_js($metaname); ?>').datepicker({
-                dateFormat: 'yy-mm-dd',
-                minDate: 0,
-                showButtonPanel: true,
-                closeText: '<?php echo esc_js(__('Close')); ?>',
-                currentText: '<?php echo esc_js(__('Today')); ?>',
-                monthNames: ['<?php echo esc_js(__('January')); ?>', '<?php echo esc_js(__('February')); ?>', '<?php echo esc_js(__('March')); ?>', '<?php echo esc_js(__('April')); ?>', '<?php echo esc_js(__('May')); ?>', '<?php echo esc_js(__('June')); ?>', '<?php echo esc_js(__('July')); ?>', '<?php echo esc_js(__('August')); ?>', '<?php echo esc_js(__('September')); ?>', '<?php echo esc_js(__('October')); ?>', '<?php echo esc_js(__('November')); ?>', '<?php echo esc_js(__('December')); ?>'],
-                monthNamesShort: ['<?php echo esc_js(_x('Jan', 'January abbreviation')); ?>', '<?php echo esc_js(_x('Feb', 'February abbreviation')); ?>', '<?php echo esc_js(_x('Mar', 'March abbreviation')); ?>', '<?php echo esc_js(_x('Apr', 'April abbreviation')); ?>', '<?php echo esc_js(_x('May', 'May abbreviation')); ?>', '<?php echo esc_js(_x('Jun', 'June abbreviation')); ?>', '<?php echo esc_js(_x('Jul', 'July abbreviation')); ?>', '<?php echo esc_js(_x('Aug', 'August abbreviation')); ?>', '<?php echo esc_js(_x('Sep', 'September abbreviation')); ?>', '<?php echo esc_js(_x('Oct', 'October abbreviation')); ?>', '<?php echo esc_js(_x('Nov', 'November abbreviation')); ?>', '<?php echo esc_js(_x('Dec', 'December abbreviation')); ?>'],
-                dayNames: ['<?php echo esc_js(__('Sunday')); ?>', '<?php echo esc_js(__('Monday')); ?>', '<?php echo esc_js(__('Tuesday')); ?>', '<?php echo esc_js(__('Wednesday')); ?>', '<?php echo esc_js(__('Thursday')); ?>', '<?php echo esc_js(__('Friday')); ?>', '<?php echo esc_js(__('Saturday')); ?>'],
-                dayNamesShort: ['<?php echo esc_js(_x('Sun', 'Sunday abbreviation')); ?>', '<?php echo esc_js(_x('Mon', 'Monday abbreviation')); ?>', '<?php echo esc_js(_x('Tue', 'Tuesday abbreviation')); ?>', '<?php echo esc_js(_x('Wed', 'Wednesday abbreviation')); ?>', '<?php echo esc_js(_x('Thu', 'Thursday abbreviation')); ?>', '<?php echo esc_js(_x('Fri', 'Friday abbreviation')); ?>', '<?php echo esc_js(_x('Sat', 'Saturday abbreviation')); ?>'],
-                dayNamesMin: ['<?php echo esc_js(_x('S', 'Sunday initial')); ?>', '<?php echo esc_js(_x('M', 'Monday initial')); ?>', '<?php echo esc_js(_x('T', 'Tuesday initial')); ?>', '<?php echo esc_js(_x('W', 'Wednesday initial')); ?>', '<?php echo esc_js(_x('T', 'Thursday initial')); ?>', '<?php echo esc_js(_x('F', 'Friday initial')); ?>', '<?php echo esc_js(_x('S', 'Saturday initial')); ?>'],
-                firstDay: <?php echo esc_js(get_option('start_of_week')); ?>,
-                beforeShow: function(input, inst) {
-                    $('#ui-datepicker-div').addClass('cus-datepicker');
-                },
-                onClose: function(dateText, inst) {
-                    $('#ui-datepicker-div').removeClass('cus-datepicker');
+            function checkDate() {
+                var month = $('#<?php echo esc_js($metaname); ?>_month').val();
+                var day = $('#<?php echo esc_js($metaname); ?>_day').val();
+                var year = $('#<?php echo esc_js($metaname); ?>_year').val();
+                var time = $('#<?php echo esc_js($metaname); ?>_time').val();
+                
+                var selectedDate = new Date(year, month - 1, day, ...time.split(':'));
+                var now = new Date();
+                
+                if (selectedDate <= now) {
+                    $('#pastmsg').show();
+                } else {
+                    $('#pastmsg').hide();
                 }
-            });
+            }
 
-            // Handle the "Today" button click
-            $(document).on('click', '.ui-datepicker-current', function() {
-                var today = new Date();
-                $('#<?php echo esc_js($metaname); ?>').datepicker('setDate', today);
-                return false;
-            });
+            $('#<?php echo esc_js($metaname); ?>_month, #<?php echo esc_js($metaname); ?>_day, #<?php echo esc_js($metaname); ?>_year, #<?php echo esc_js($metaname); ?>_time').on('change', checkDate);
+            
+            checkDate(); // Initial check
         });
         </script>
         <style>
-        .cus-datepicker {
-            background-color: #fff;
-            border: 1px solid #ddd;
-            box-shadow: 0 1px 2px rgba(0,0,0,.07);
+        .block-editor-publish-date-time-picker .components-datetime__date,
+        .block-editor-publish-date-time-picker .components-datetime__time {
+            display: flex;
+            align-items: center;
+            margin-bottom: 1em;
+        }
+        .block-editor-publish-date-time-picker select,
+        .block-editor-publish-date-time-picker input[type="number"],
+        .block-editor-publish-date-time-picker input[type="time"] {
+            margin-right: 0.5em;
+        }
+        .block-editor-publish-date-time-picker input[type="number"] {
+            width: 5em;
         }
         </style>
         <?php
