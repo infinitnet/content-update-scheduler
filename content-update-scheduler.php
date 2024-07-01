@@ -569,27 +569,35 @@ class ContentUpdateScheduler
             </p>
         </div>
         <script type="text/javascript">
-        jQuery(document).ready(function($) {
-            function checkDate() {
-                var month = $('#<?php echo esc_js($metaname); ?>_month').val();
-                var day = $('#<?php echo esc_js($metaname); ?>_day').val();
-                var year = $('#<?php echo esc_js($metaname); ?>_year').val();
-                var time = $('#<?php echo esc_js($metaname); ?>_time').val();
-                
-                var selectedDate = new Date(year, month - 1, day, ...time.split(':'));
-                var now = new Date();
-                
-                if (selectedDate <= now) {
-                    $('#pastmsg').show();
-                } else {
-                    $('#pastmsg').hide();
+        function initContentUpdateScheduler() {
+            jQuery(document).ready(function($) {
+                function checkDate() {
+                    var month = $('#<?php echo esc_js($metaname); ?>_month').val();
+                    var day = $('#<?php echo esc_js($metaname); ?>_day').val();
+                    var year = $('#<?php echo esc_js($metaname); ?>_year').val();
+                    var time = $('#<?php echo esc_js($metaname); ?>_time').val();
+                    
+                    var selectedDate = new Date(year, month - 1, day, ...time.split(':'));
+                    var now = new Date();
+                    
+                    if (selectedDate <= now) {
+                        $('#pastmsg').show();
+                    } else {
+                        $('#pastmsg').hide();
+                    }
                 }
-            }
 
-            $('#<?php echo esc_js($metaname); ?>_month, #<?php echo esc_js($metaname); ?>_day, #<?php echo esc_js($metaname); ?>_year, #<?php echo esc_js($metaname); ?>_time').on('change', checkDate);
-            
-            checkDate(); // Initial check
-        });
+                $('#<?php echo esc_js($metaname); ?>_month, #<?php echo esc_js($metaname); ?>_day, #<?php echo esc_js($metaname); ?>_year, #<?php echo esc_js($metaname); ?>_time').on('change', checkDate);
+                
+                checkDate(); // Initial check
+            });
+        }
+
+        if (document.readyState === 'complete' || (document.readyState !== 'loading' && !document.documentElement.doScroll)) {
+            initContentUpdateScheduler();
+        } else {
+            document.addEventListener('DOMContentLoaded', initContentUpdateScheduler);
+        }
         </script>
         <style>
         .block-editor-publish-date-time-picker .components-datetime__date,
@@ -878,12 +886,15 @@ class ContentUpdateScheduler
                 return $post_id;
             }
 
-            if (isset($_POST[$pub]) && !empty($_POST[$pub])) {
-                $tz = wp_timezone();
-                $date_string = sanitize_text_field(wp_unslash($_POST[$pub]));
+            if (isset($_POST[$pub . '_month'], $_POST[$pub . '_day'], $_POST[$pub . '_year'], $_POST[$pub . '_time'])) {
+                $month = intval($_POST[$pub . '_month']);
+                $day = intval($_POST[$pub . '_day']);
+                $year = intval($_POST[$pub . '_year']);
+                $time = sanitize_text_field($_POST[$pub . '_time']);
 
-                // Parse the date string
-                $date_time = DateTime::createFromFormat('Y-m-d H:i:s', $date_string, $tz);
+                $tz = wp_timezone();
+                $date_string = sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
+                $date_time = DateTime::createFromFormat('Y-m-d H:i', $date_string, $tz);
 
                 if ($date_time === false) {
                     // Invalid date format
