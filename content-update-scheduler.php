@@ -431,7 +431,7 @@ class ContentUpdateScheduler
     {
         if ('cus_publish' === $column) {
             $post = get_post($post_id);
-            if ($post->post_status === self::$_cus_publish_status) {
+            if ($post->post_status === self::$_cus_publish_status || get_post_meta($post_id, self::$_cus_publish_status . '_original', true)) {
                 $stamp = get_post_meta($post_id, self::$_cus_publish_status . '_pubdate', true);
                 if ($stamp) {
                     echo esc_html(self::get_pubdate($stamp));
