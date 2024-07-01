@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 3.7.0
 Tested up to: 6.5.4
-Stable tag: 2.2
+Stable tag: 2.3
 Requires PHP: 5.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -49,6 +49,11 @@ Each page and post has a 'Scheduled Content Update' link in the overview, which 
 Yes, it has been tested with Elementor and Oxygen Builder. It may also work with other page builders.
 
 == Changelog ==
+
+= 2.3 =
+* Refactored datepicker: fixed bugs, allow time selection by minute
+* Improved WooCommerce compatibility
+* Don't show "Republication Date" for original posts but only for republication drafts
 
 = 2.2 =
 * Improved fix for 404 issue
