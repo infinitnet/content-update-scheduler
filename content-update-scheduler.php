@@ -880,28 +880,17 @@ class ContentUpdateScheduler
                 return $post_id;
             }
 
-            if (isset($_POST[$pub]) && isset($_POST[$pub . '_time_hrs']) && isset($_POST[$pub . '_time_mins']) && !empty($_POST[$pub])) {
-                $tz = self::get_timezone_object();
+            if (isset($_POST[$pub]) && !empty($_POST[$pub])) {
+                $tz = wp_timezone();
                 $date_string = sanitize_text_field(wp_unslash($_POST[$pub]));
-                $time_hrs = sanitize_text_field(wp_unslash($_POST[$pub . '_time_hrs']));
-                $time_mins = sanitize_text_field(wp_unslash($_POST[$pub . '_time_mins']));
 
                 // Parse the date string
-                $date_parts = explode('.', $date_string);
-                if (count($date_parts) !== 3) {
+                $date_time = DateTime::createFromFormat('Y-m-d H:i:s', $date_string, $tz);
+
+                if ($date_time === false) {
                     // Invalid date format
                     return $post_id;
                 }
-
-                $year = intval($date_parts[2]);
-                $month = intval($date_parts[1]);
-                $day = intval($date_parts[0]);
-
-                // Create DateTime object
-                $date_time = new DateTime();
-                $date_time->setTimezone($tz);
-                $date_time->setDate($year, $month, $day);
-                $date_time->setTime(intval($time_hrs), intval($time_mins));
 
                 $stamp = $date_time->getTimestamp();
 
