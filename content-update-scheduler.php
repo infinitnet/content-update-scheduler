@@ -430,10 +430,12 @@ class ContentUpdateScheduler
     public static function manage_pages_custom_column($column, $post_id)
     {
         if ('cus_publish' === $column) {
-            $stamp = get_post_meta($post_id, self::$_cus_publish_status . '_pubdate', true);
-
-            if ($stamp) {
-                echo esc_html(self::get_pubdate($stamp));
+            $post = get_post($post_id);
+            if ($post->post_status === self::$_cus_publish_status) {
+                $stamp = get_post_meta($post_id, self::$_cus_publish_status . '_pubdate', true);
+                if ($stamp) {
+                    echo esc_html(self::get_pubdate($stamp));
+                }
             }
         }
     }
@@ -1023,8 +1025,7 @@ class ContentUpdateScheduler
         $post->post_date = $post_date; // we need this to get wp to recognize this as a newly updated post.
         $post->post_date_gmt = get_gmt_from_date($post_date);
 
-        //delete_post_meta( $orig->ID, self::$_cus_publish_status . '_original' );
-        //delete_post_meta( $orig->ID, self::$_cus_publish_status . '_pubdate' );
+        delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
 
         $result = wp_update_post($post, true);
         if (!is_wp_error($result)) {
