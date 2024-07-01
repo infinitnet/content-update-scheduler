@@ -499,46 +499,7 @@ class ContentUpdateScheduler
         });
 
         wp_enqueue_script('jquery-ui-datepicker');
-        wp_enqueue_style('jquery-ui-blitzer', plugin_dir_url(__FILE__) . 'jquery-ui.min.css');
-        wp_enqueue_script(self::$_cus_publish_status . '-datepicker.js', plugins_url('js/publish-datepicker.js', __FILE__), array( 'jquery-ui-datepicker' ));
-
-        $months = array();
-        for ($i = 1; $i <= 12; $i++) {
-            $months[] = wp_date('F', strtotime('2014-' . $i . '-01 00:00:00'));
-        }
-        $days = array();
-        for ($i = 23; $i <= 29; $i++) {
-            $days[] = wp_date('D', strtotime('2014-03-' . $i . ' 00:00:00'));
-        }
-
-        // Get WP date format and make it usable in the datepicker.
-        $df = get_option('date_format');
-        $df = str_replace(
-            array( 'd',  'j', 'S', 'l',  'D', 'm',  'n', 'F',  'M', 'Y',  'y', 'c',        'r',         'U' ),
-            array( 'dd', 'd', '',  'DD', 'D', 'mm', 'm', 'MM', 'M', 'yy', 'y', 'yy-mm-dd', 'D, d M yy', '@' ),
-            $df
-        );
-
-        // Get the site's timezone offset
-        $timezone = self::get_timezone_string();
-        $site_timezone = new DateTimeZone($timezone);
-        $site_offset = $site_timezone->getOffset(new DateTime("now", new DateTimeZone('UTC'))) / 60;
-
-        $js_data = array(
-            'datepicker' => array(
-                'daynames'   => $days,
-                'monthnames' => $months,
-                'elementid'  => self::$_cus_publish_status . '_pubdate',
-                'displayid'  => self::$_cus_publish_status . '_pubdate_display',
-                'dateformat' => $df,
-            ),
-            'text' => array(
-                'save' => __('Save'),
-            ),
-            'siteTimezone' => self::get_timezone_string(),
-        );
-
-        wp_localize_script(self::$_cus_publish_status . '-datepicker.js', 'CUSScheduleUpdate', $js_data);
+        wp_enqueue_style('wp-jquery-ui-dialog');
 
         add_meta_box('meta_' . self::$_cus_publish_status, self::$_cus_publish_metabox, array( 'ContentUpdateScheduler', 'create_meta_box' ), $post_type, 'side');
     }
@@ -556,59 +517,50 @@ class ContentUpdateScheduler
         $metaname = self::$_cus_publish_status . '_pubdate';
         $stamp = get_post_meta($post->ID, $metaname, true);
         $date = '';
-        $offset = get_option('gmt_offset') * 3600;
-        $dateo = new DateTime('now', self::get_timezone_object());
+        $time = '';
+        
         if ($stamp) {
-            $dateo->setTimestamp($stamp);
+            $date = wp_date('Y-m-d', $stamp);
+            $time = wp_date('H:i', $stamp);
         }
-        $date = wp_date(get_option('date_format'), $dateo->getTimestamp() + $offset);
-        $date2 = $dateo->format('d.m.Y');
 
-        if (! $stamp && ContentUpdateScheduler_Options::get('tsu_nodate') === 'nothing') {
-            $date = '';
-        }
-        $dec_time = floatval(get_option('gmt_offset'));
-        $gmt_hour = floor($dec_time);
-        $gmt_min = round(60 * ($dec_time - $gmt_hour));
         ?>
-            <p>
-                <strong><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></strong>
-            </p>
-            <label class="screen-reader-text" for="<?php echo esc_attr($metaname); ?>"><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></label>
-            <input type="hidden" name="<?php echo esc_attr($metaname); ?>" id="<?php echo esc_attr($metaname); ?>" value="<?php echo esc_attr($date2); ?>"/>
-            <input type="text" class="widefat" name="<?php echo esc_attr($metaname); ?>_display" id="<?php echo esc_attr($metaname); ?>_display" value="<?php echo esc_attr($date); ?>"/>
-            <p>
-                <strong><?php esc_html_e('Time', 'cus-scheduleupdate-td'); ?></strong>
-            </p>
-            <label class="screen-reader-text" for="<?php echo esc_attr($metaname); ?>_time"><?php esc_html_e('Time', 'cus-scheduleupdate-td'); ?></label>
-            <select name="<?php echo esc_attr($metaname); ?>_time_hrs" id="<?php echo esc_attr($metaname); ?>_time">
-                <?php for ($i = 0; $i < 24; $i++) : ?>
-                <option value="<?php echo esc_attr(sprintf('%02d', $i)); ?>" <?php echo intval($dateo->format('H')) === $i ? 'selected' : ''; ?>><?php echo esc_html(sprintf('%02d', $i)); ?></option>
-                <?php endfor; ?>
-            </select>:
-            <select name="<?php echo esc_attr($metaname); ?>_time_mins">
-                <?php for ($i = 0; $i < 60; $i += 5) : ?>
-                <option value="<?php echo esc_attr(sprintf('%02d', $i)); ?>" <?php echo intval(ceil($dateo->format('i') / 10) * 10) === $i ? 'selected' : ''; ?>><?php echo esc_html(sprintf('%02d', $i)); ?></option>
-                <?php endfor; ?>
-            </select>
-            <p>
+        <p>
+            <strong><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></strong>
+        </p>
+        <label class="screen-reader-text" for="<?php echo esc_attr($metaname); ?>"><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></label>
+        <input type="text" class="widefat" name="<?php echo esc_attr($metaname); ?>" id="<?php echo esc_attr($metaname); ?>" value="<?php echo esc_attr($date); ?>" />
+        
+        <p>
+            <strong><?php esc_html_e('Time', 'cus-scheduleupdate-td'); ?></strong>
+        </p>
+        <label class="screen-reader-text" for="<?php echo esc_attr($metaname); ?>_time"><?php esc_html_e('Time', 'cus-scheduleupdate-td'); ?></label>
+        <input type="time" name="<?php echo esc_attr($metaname); ?>_time" id="<?php echo esc_attr($metaname); ?>_time" value="<?php echo esc_attr($time); ?>" />
+        
+        <p>
+            <?php esc_html_e('Please enter Time in the site\'s local timezone', 'cus-scheduleupdate-td'); ?>
+        </p>
+        
+        <p>
+            <div id="pastmsg" style="color:red; display:none;">
                 <?php
-                // translators: timezone placeholder
-                echo sprintf(__('Please enter <i>Time</i> in the site\'s local timezone', 'cus-scheduleupdate-td')); // WPCS: XSS okay.
+                echo esc_html__('The release date is in the past.', 'cus-scheduleupdate-td');
+                if (ContentUpdateScheduler_Options::get('tsu_nodate') === 'nothing') {
+                    echo esc_html__('This post will not be published.', 'cus-scheduleupdate-td');
+                } else {
+                    echo esc_html__('This post will be published 5 minutes from now.', 'cus-scheduleupdate-td');
+                }
                 ?>
-            </p>
-            <p>
-                <div id="pastmsg" style="color:red; display:none;">
-                    <?php
-                    echo esc_html__('The releasedate is in the past.', 'cus-scheduleupdate-td');
-                    if (ContentUpdateScheduler_Options::get('tsu_nodate') === 'nothing') {
-                        echo esc_html__('This post will not be published.', 'cus-scheduleupdate-td');
-                    } else {
-                        echo esc_html__('This post will be published 5 minutes from now.', 'cus-scheduleupdate-td');
-                    }
-                    ?>
-                </div>
-            </p>
+            </div>
+        </p>
+        <script type="text/javascript">
+        jQuery(document).ready(function($) {
+            $('#<?php echo esc_js($metaname); ?>').datepicker({
+                dateFormat: 'yy-mm-dd',
+                minDate: 0
+            });
+        });
+        </script>
         <?php
     }
 
