@@ -500,6 +500,7 @@ class ContentUpdateScheduler
 
         wp_enqueue_script('jquery-ui-datepicker');
         wp_enqueue_style('wp-jquery-ui-dialog');
+        wp_enqueue_style('wp-admin');
 
         add_meta_box('meta_' . self::$_cus_publish_status, self::$_cus_publish_metabox, array( 'ContentUpdateScheduler', 'create_meta_box' ), $post_type, 'side');
     }
@@ -557,7 +558,16 @@ class ContentUpdateScheduler
         jQuery(document).ready(function($) {
             $('#<?php echo esc_js($metaname); ?>').datepicker({
                 dateFormat: 'yy-mm-dd',
-                minDate: 0
+                minDate: 0,
+                showButtonPanel: true,
+                closeText: '<?php echo esc_js(__('Close')); ?>',
+                currentText: '<?php echo esc_js(__('Today')); ?>',
+                monthNames: ['<?php echo esc_js(__('January')); ?>', '<?php echo esc_js(__('February')); ?>', '<?php echo esc_js(__('March')); ?>', '<?php echo esc_js(__('April')); ?>', '<?php echo esc_js(__('May')); ?>', '<?php echo esc_js(__('June')); ?>', '<?php echo esc_js(__('July')); ?>', '<?php echo esc_js(__('August')); ?>', '<?php echo esc_js(__('September')); ?>', '<?php echo esc_js(__('October')); ?>', '<?php echo esc_js(__('November')); ?>', '<?php echo esc_js(__('December')); ?>'],
+                monthNamesShort: ['<?php echo esc_js(_x('Jan', 'January abbreviation')); ?>', '<?php echo esc_js(_x('Feb', 'February abbreviation')); ?>', '<?php echo esc_js(_x('Mar', 'March abbreviation')); ?>', '<?php echo esc_js(_x('Apr', 'April abbreviation')); ?>', '<?php echo esc_js(_x('May', 'May abbreviation')); ?>', '<?php echo esc_js(_x('Jun', 'June abbreviation')); ?>', '<?php echo esc_js(_x('Jul', 'July abbreviation')); ?>', '<?php echo esc_js(_x('Aug', 'August abbreviation')); ?>', '<?php echo esc_js(_x('Sep', 'September abbreviation')); ?>', '<?php echo esc_js(_x('Oct', 'October abbreviation')); ?>', '<?php echo esc_js(_x('Nov', 'November abbreviation')); ?>', '<?php echo esc_js(_x('Dec', 'December abbreviation')); ?>'],
+                dayNames: ['<?php echo esc_js(__('Sunday')); ?>', '<?php echo esc_js(__('Monday')); ?>', '<?php echo esc_js(__('Tuesday')); ?>', '<?php echo esc_js(__('Wednesday')); ?>', '<?php echo esc_js(__('Thursday')); ?>', '<?php echo esc_js(__('Friday')); ?>', '<?php echo esc_js(__('Saturday')); ?>'],
+                dayNamesShort: ['<?php echo esc_js(_x('Sun', 'Sunday abbreviation')); ?>', '<?php echo esc_js(_x('Mon', 'Monday abbreviation')); ?>', '<?php echo esc_js(_x('Tue', 'Tuesday abbreviation')); ?>', '<?php echo esc_js(_x('Wed', 'Wednesday abbreviation')); ?>', '<?php echo esc_js(_x('Thu', 'Thursday abbreviation')); ?>', '<?php echo esc_js(_x('Fri', 'Friday abbreviation')); ?>', '<?php echo esc_js(_x('Sat', 'Saturday abbreviation')); ?>'],
+                dayNamesMin: ['<?php echo esc_js(_x('S', 'Sunday initial')); ?>', '<?php echo esc_js(_x('M', 'Monday initial')); ?>', '<?php echo esc_js(_x('T', 'Tuesday initial')); ?>', '<?php echo esc_js(_x('W', 'Wednesday initial')); ?>', '<?php echo esc_js(_x('T', 'Thursday initial')); ?>', '<?php echo esc_js(_x('F', 'Friday initial')); ?>', '<?php echo esc_js(_x('S', 'Saturday initial')); ?>'],
+                firstDay: <?php echo esc_js(get_option('start_of_week')); ?>
             });
         });
         </script>
