@@ -240,6 +240,9 @@ class ContentUpdateScheduler
         // Specific filter for WooCommerce products
         add_filter('manage_edit-product_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
         add_action('manage_product_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
+
+        // Check scheduled events
+        self::check_scheduled_events();
     }
 
     /**
@@ -938,8 +941,23 @@ class ContentUpdateScheduler
 
                 wp_clear_scheduled_hook('cus_publish_post', array($post_id));
                 update_post_meta($post_id, $pub, $stamp);
-                wp_schedule_single_event($stamp, 'cus_publish_post', array($post_id));
-                error_log("Scheduled event for timestamp: $stamp");
+                $scheduled = wp_schedule_single_event($stamp, 'cus_publish_post', array($post_id));
+                if ($scheduled === false) {
+                    error_log("Failed to schedule event for timestamp: $stamp");
+                } else {
+                    error_log("Successfully scheduled event for timestamp: $stamp");
+                }
+                
+                // Verify the event was scheduled
+                $next_scheduled = wp_next_scheduled('cus_publish_post', array($post_id));
+                if ($next_scheduled === false) {
+                    error_log("Event not found in the schedule after attempting to add it.");
+                } else {
+                    error_log("Next scheduled time for this event: " . date('Y-m-d H:i:s', $next_scheduled));
+                }
+
+                // Check all scheduled events
+                self::check_scheduled_events();
             } else {
                 error_log("Date/time POST variables not set");
             }
@@ -979,21 +997,33 @@ class ContentUpdateScheduler
      */
     public static function publish_post($post_id)
     {
+        error_log("publish_post called for post ID: " . $post_id);
         $orig_id = get_post_meta($post_id, self::$_cus_publish_status . '_original', true);
 
         // break early if given post is not an actual scheduled post created by this plugin.
         if (! $orig_id) {
+            error_log("No original post found for post ID: " . $post_id);
             return $post_id;
         }
 
         $orig = get_post($orig_id);
-
-        // Ensure the post is not in the trash before proceeding
-        if ($post->post_status === 'trash') {
+        if (!$orig) {
+            error_log("Original post not found for ID: " . $orig_id);
             return $post_id;
         }
 
         $post = get_post($post_id);
+        if (!$post) {
+            error_log("Scheduled post not found for ID: " . $post_id);
+            return $post_id;
+        }
+
+        // Ensure the post is not in the trash before proceeding
+        if ($post->post_status === 'trash') {
+            error_log("Post is in trash, aborting publish process for post ID: " . $post_id);
+            return $post_id;
+        }
+
         $original_stock_status = get_post_meta($orig->ID, '_stock_status', true);
         $original_stock_quantity = get_post_meta($orig->ID, '_stock', true);
 
@@ -1032,22 +1062,25 @@ class ContentUpdateScheduler
         delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
 
         $result = wp_update_post($post, true);
-        if (!is_wp_error($result)) {
-            if ($original_stock_status !== '') {
-                update_post_meta($post->ID, '_stock_status', $original_stock_status);
-            }
-            if ($original_stock_quantity !== '') {
-                update_post_meta($post->ID, '_stock', $original_stock_quantity);
-            }
-        }
         if (is_wp_error($result)) {
-            return $result;
-        }
-        $result = wp_delete_post($post_id, true);
-        if (is_wp_error($result)) {
+            error_log("Error updating post: " . $result->get_error_message());
             return $result;
         }
 
+        if ($original_stock_status !== '') {
+            update_post_meta($post->ID, '_stock_status', $original_stock_status);
+        }
+        if ($original_stock_quantity !== '') {
+            update_post_meta($post->ID, '_stock', $original_stock_quantity);
+        }
+
+        $delete_result = wp_delete_post($post_id, true);
+        if (is_wp_error($delete_result)) {
+            error_log("Error deleting scheduled post: " . $delete_result->get_error_message());
+            return $delete_result;
+        }
+
+        error_log("Successfully published post. Original ID: " . $orig->ID);
         return $orig->ID;
     }
 
@@ -1061,9 +1094,11 @@ class ContentUpdateScheduler
      */
     public static function cron_publish_post($ID)
     {
+        error_log("cron_publish_post called for post ID: " . $ID);
         kses_remove_filters();
-        self::publish_post($ID);
+        $result = self::publish_post($ID);
         kses_init_filters();
+        error_log("cron_publish_post completed for post ID: " . $ID . ". Result: " . print_r($result, true));
     }
 
     /**
@@ -1213,3 +1248,19 @@ function cus_deactivation() {
     global $wpdb;
     $wpdb->query("DELETE FROM $wpdb->postmeta WHERE meta_key = 'cus_sc_publish_pubdate'");
 }
+    public static function check_scheduled_events() {
+        error_log("Checking scheduled events");
+        $cron = _get_cron_array();
+        $found = false;
+        foreach ($cron as $timestamp => $cronhooks) {
+            if (isset($cronhooks['cus_publish_post'])) {
+                foreach ($cronhooks['cus_publish_post'] as $hash => $event) {
+                    $found = true;
+                    error_log("Found scheduled cus_publish_post event: " . date('Y-m-d H:i:s', $timestamp) . " for post ID: " . $event['args'][0]);
+                }
+            }
+        }
+        if (!$found) {
+            error_log("No scheduled cus_publish_post events found");
+        }
+    }
