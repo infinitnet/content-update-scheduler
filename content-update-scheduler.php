@@ -241,8 +241,10 @@ class ContentUpdateScheduler
         add_filter('manage_edit-product_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
         add_action('manage_product_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
 
-        // Check scheduled events
-        self::check_scheduled_events();
+        // Set up custom cron schedule
+        if (!wp_next_scheduled('cus_check_overdue_posts')) {
+            wp_schedule_event(time(), 'five_minutes', 'cus_check_overdue_posts');
+        }
     }
 
     /**
@@ -1228,6 +1230,27 @@ class ContentUpdateScheduler
             error_log("No scheduled cus_publish_post events found");
         }
     }
+
+    public static function check_and_publish_overdue_posts() {
+        error_log("Checking for overdue posts to publish");
+        global $wpdb;
+        $current_time = current_time('timestamp');
+        
+        $overdue_posts = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT post_id FROM {$wpdb->postmeta} 
+                WHERE meta_key = %s 
+                AND meta_value <= %d",
+                self::$_cus_publish_status . '_pubdate',
+                $current_time
+            )
+        );
+
+        foreach ($overdue_posts as $post) {
+            error_log("Publishing overdue post ID: " . $post->post_id);
+            self::cron_publish_post($post->post_id);
+        }
+    }
 }
 
 add_action('save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2);
@@ -1259,9 +1282,22 @@ add_action('admin_footer', function (){ ?>
 
 add_filter('template_redirect', array( 'ContentUpdateScheduler', 'user_restriction_scheduled_content' ), 1);
 
+// Add custom cron interval
+add_filter('cron_schedules', function($schedules) {
+    $schedules['five_minutes'] = array(
+        'interval' => 300,
+        'display' => __('Every Five Minutes')
+    );
+    return $schedules;
+});
+
+// Hook for checking overdue posts
+add_action('cus_check_overdue_posts', array('ContentUpdateScheduler', 'check_and_publish_overdue_posts'));
+
 register_deactivation_hook(__FILE__, 'cus_deactivation');
 
 function cus_deactivation() {
     global $wpdb;
     $wpdb->query("DELETE FROM $wpdb->postmeta WHERE meta_key = 'cus_sc_publish_pubdate'");
+    wp_clear_scheduled_hook('cus_check_overdue_posts');
 }
