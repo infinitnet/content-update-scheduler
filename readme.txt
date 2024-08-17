@@ -1,10 +1,10 @@
 === Content Update Scheduler ===
 Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
-Requires at least: 3.7.0
-Tested up to: 6.5.4
-Stable tag: 2.3
-Requires PHP: 5.3
+Requires at least: 5.0
+Tested up to: 6.6.1
+Stable tag: 2.3.1
+Requires PHP: 7.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
 
@@ -49,6 +49,9 @@ Each page and post has a 'Scheduled Content Update' link in the overview, which 
 Yes, it has been tested with Elementor and Oxygen Builder. It may also work with other page builders.
 
 == Changelog ==
+
+= 2.3.1 =
+* WordPress 6.6.1 fix/workaround: Implemented custom cron job to check and publish overdue scheduled posts
 
 = 2.3 =
 * Refactored datepicker: fixed bugs, allow time selection by minute
