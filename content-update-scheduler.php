@@ -1211,6 +1211,23 @@ class ContentUpdateScheduler
             }
         }
     }
+
+    public static function check_scheduled_events() {
+        error_log("Checking scheduled events");
+        $cron = _get_cron_array();
+        $found = false;
+        foreach ($cron as $timestamp => $cronhooks) {
+            if (isset($cronhooks['cus_publish_post'])) {
+                foreach ($cronhooks['cus_publish_post'] as $hash => $event) {
+                    $found = true;
+                    error_log("Found scheduled cus_publish_post event: " . date('Y-m-d H:i:s', $timestamp) . " for post ID: " . $event['args'][0]);
+                }
+            }
+        }
+        if (!$found) {
+            error_log("No scheduled cus_publish_post events found");
+        }
+    }
 }
 
 add_action('save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2);
@@ -1248,19 +1265,3 @@ function cus_deactivation() {
     global $wpdb;
     $wpdb->query("DELETE FROM $wpdb->postmeta WHERE meta_key = 'cus_sc_publish_pubdate'");
 }
-    public static function check_scheduled_events() {
-        error_log("Checking scheduled events");
-        $cron = _get_cron_array();
-        $found = false;
-        foreach ($cron as $timestamp => $cronhooks) {
-            if (isset($cronhooks['cus_publish_post'])) {
-                foreach ($cronhooks['cus_publish_post'] as $hash => $event) {
-                    $found = true;
-                    error_log("Found scheduled cus_publish_post event: " . date('Y-m-d H:i:s', $timestamp) . " for post ID: " . $event['args'][0]);
-                }
-            }
-        }
-        if (!$found) {
-            error_log("No scheduled cus_publish_post events found");
-        }
-    }
