@@ -989,101 +989,128 @@ class ContentUpdateScheduler
     /**
      * Publishes a scheduled update
      *
-     * Copies the original post's contents and meta into it's "scheduled update" and then deletes
-     * the original post. This function is either called by wp_cron or if the user hits the
+     * Copies the original post's contents and meta into its "scheduled update" and then deletes
+     * the scheduled post. This function is either called by wp_cron or if the user hits the
      * 'publish now' action
      *
      * @param int $post_id the post's id.
      *
-     * @return int the original post's id
+     * @return int|WP_Error the original post's id or WP_Error on failure
      */
     public static function publish_post($post_id)
     {
         error_log("publish_post called for post ID: " . $post_id);
-        $orig_id = get_post_meta($post_id, self::$_cus_publish_status . '_original', true);
 
-        // break early if given post is not an actual scheduled post created by this plugin.
-        if (! $orig_id) {
-            error_log("No original post found for post ID: " . $post_id);
-            return $post_id;
+        // Implement locking mechanism
+        $lock_key = 'cus_publish_lock_' . $post_id;
+        if (!get_transient($lock_key)) {
+            set_transient($lock_key, true, 300); // Lock for 5 minutes
+        } else {
+            error_log("Publish process already running for post ID: " . $post_id);
+            return new WP_Error('locked', 'Publish process already running for this post');
         }
 
-        $orig = get_post($orig_id);
-        if (!$orig) {
-            error_log("Original post not found for ID: " . $orig_id);
-            return $post_id;
+        try {
+            $orig_id = get_post_meta($post_id, self::$_cus_publish_status . '_original', true);
+
+            // break early if given post is not an actual scheduled post created by this plugin.
+            if (!$orig_id) {
+                error_log("No original post found for post ID: " . $post_id);
+                return new WP_Error('no_original', 'No original post found');
+            }
+
+            $orig = get_post($orig_id);
+            if (!$orig) {
+                error_log("Original post not found for ID: " . $orig_id);
+                return new WP_Error('original_not_found', 'Original post not found');
+            }
+
+            $post = get_post($post_id);
+            if (!$post) {
+                error_log("Scheduled post not found for ID: " . $post_id);
+                return new WP_Error('scheduled_not_found', 'Scheduled post not found');
+            }
+
+            // Ensure the post is not in the trash before proceeding
+            if ($post->post_status === 'trash') {
+                error_log("Post is in trash, aborting publish process for post ID: " . $post_id);
+                return new WP_Error('post_trashed', 'Post is in trash');
+            }
+
+            $original_stock_status = get_post_meta($orig->ID, '_stock_status', true);
+            $original_stock_quantity = get_post_meta($orig->ID, '_stock', true);
+
+            self::handle_plugin_css_copy($post->ID, $orig_id);
+
+            /**
+             * Fires before a scheduled post is being updated
+             *
+             * @param WP_Post $post the scheduled update post.
+             * @param WP_post $orig the original post.
+             */
+            do_action('ContentUpdateScheduler\\before_publish_post', $post, $orig);
+            
+            // Start "transaction"
+            global $wpdb;
+            $wpdb->query('START TRANSACTION');
+
+            delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
+            // Copy meta and terms, restoring references to the original post ID
+            self::copy_meta_and_terms($post->ID, $orig->ID, true);
+
+            $post->ID = $orig->ID;
+            $post->post_name = $orig->post_name;
+            $post->guid = $orig->guid;
+            $post->post_parent = $orig->post_parent;
+            $post->post_status = $orig->post_status;
+            $post_date = wp_date('Y-m-d H:i:s');
+
+            /**
+             * Filter the new posts' post date
+             *
+             * @param string  $post_date the date to be used, must be in the form of `Y-m-d H:i:s`.
+             * @param WP_Post $post      the scheduled update post.
+             * @param WP_Post $orig      the original post.
+             */
+            $post_date = apply_filters('ContentUpdateScheduler\\publish_post_date', $post_date, $post, $orig);
+
+            $post->post_date = $post_date;
+            $post->post_date_gmt = get_gmt_from_date($post_date);
+
+            delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
+
+            $result = wp_update_post($post, true);
+            if (is_wp_error($result)) {
+                error_log("Error updating post: " . $result->get_error_message());
+                $wpdb->query('ROLLBACK');
+                return $result;
+            }
+
+            if ($original_stock_status !== '') {
+                update_post_meta($post->ID, '_stock_status', $original_stock_status);
+            }
+            if ($original_stock_quantity !== '') {
+                update_post_meta($post->ID, '_stock', $original_stock_quantity);
+            }
+
+            $delete_result = wp_delete_post($post_id, true);
+            if (is_wp_error($delete_result)) {
+                error_log("Error deleting scheduled post: " . $delete_result->get_error_message());
+                $wpdb->query('ROLLBACK');
+                return $delete_result;
+            }
+
+            $wpdb->query('COMMIT');
+
+            error_log("Successfully published post. Original ID: " . $orig->ID);
+            return $orig->ID;
+        } catch (Exception $e) {
+            error_log("Exception occurred during publish process: " . $e->getMessage());
+            $wpdb->query('ROLLBACK');
+            return new WP_Error('publish_exception', $e->getMessage());
+        } finally {
+            delete_transient($lock_key);
         }
-
-        $post = get_post($post_id);
-        if (!$post) {
-            error_log("Scheduled post not found for ID: " . $post_id);
-            return $post_id;
-        }
-
-        // Ensure the post is not in the trash before proceeding
-        if ($post->post_status === 'trash') {
-            error_log("Post is in trash, aborting publish process for post ID: " . $post_id);
-            return $post_id;
-        }
-
-        $original_stock_status = get_post_meta($orig->ID, '_stock_status', true);
-        $original_stock_quantity = get_post_meta($orig->ID, '_stock', true);
-
-        self::handle_plugin_css_copy($post->ID, $orig_id);
-
-        /**
-         * Fires before a scheduled post is being updated
-         *
-         * @param WP_Post $post the scheduled update post.
-         * @param WP_post $orig the original post.
-         */
-        do_action('ContentUpdateScheduler\\before_publish_post', $post, $orig);
-        delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
-        // Copy meta and terms, restoring references to the original post ID
-        self::copy_meta_and_terms($post->ID, $orig->ID, true);
-
-        $post->ID = $orig->ID;
-        $post->post_name = $orig->post_name;
-        $post->guid = $orig->guid;
-        $post->post_parent = $orig->post_parent;
-        $post->post_status = $orig->post_status;
-        $post_date = wp_date('Y-m-d H:i:s');
-
-        /**
-         * Filter the new posts' post date
-         *
-         * @param string  $post_date the date to be used, must be in the form of `Y-m-d H:i:s`.
-         * @param WP_Post $post      the scheduled update post.
-         * @param WP_Post $orig      the original post.
-         */
-        $post_date = apply_filters('ContentUpdateScheduler\\publish_post_date', $post_date, $post, $orig);
-
-        $post->post_date = $post_date; // we need this to get wp to recognize this as a newly updated post.
-        $post->post_date_gmt = get_gmt_from_date($post_date);
-
-        delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
-
-        $result = wp_update_post($post, true);
-        if (is_wp_error($result)) {
-            error_log("Error updating post: " . $result->get_error_message());
-            return $result;
-        }
-
-        if ($original_stock_status !== '') {
-            update_post_meta($post->ID, '_stock_status', $original_stock_status);
-        }
-        if ($original_stock_quantity !== '') {
-            update_post_meta($post->ID, '_stock', $original_stock_quantity);
-        }
-
-        $delete_result = wp_delete_post($post_id, true);
-        if (is_wp_error($delete_result)) {
-            error_log("Error deleting scheduled post: " . $delete_result->get_error_message());
-            return $delete_result;
-        }
-
-        error_log("Successfully published post. Original ID: " . $orig->ID);
-        return $orig->ID;
     }
 
     /**
@@ -1100,7 +1127,13 @@ class ContentUpdateScheduler
         kses_remove_filters();
         $result = self::publish_post($ID);
         kses_init_filters();
-        error_log("cron_publish_post completed for post ID: " . $ID . ". Result: " . print_r($result, true));
+        
+        if (is_wp_error($result)) {
+            error_log("Error in cron_publish_post for post ID: " . $ID . ". Error: " . $result->get_error_message());
+            // Here you might want to add some error handling, such as notifying an admin or rescheduling the event
+        } else {
+            error_log("cron_publish_post completed successfully for post ID: " . $ID . ". Result: " . print_r($result, true));
+        }
     }
 
     /**
