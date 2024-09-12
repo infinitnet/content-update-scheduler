@@ -936,8 +936,11 @@ class ContentUpdateScheduler
 
                 error_log("Calculated timestamp: $stamp");
 
-                if ($stamp <= time()) {
-                    $stamp = time() + 300; // 5 minutes from now
+                $current_time = new DateTime('now', $tz);
+                if ($date_time <= $current_time) {
+                    $date_time = clone $current_time;
+                    $date_time->modify('+5 minutes');
+                    $stamp = $date_time->getTimestamp();
                     error_log("Timestamp was in the past, set to 5 minutes from now: $stamp");
                 }
 
@@ -1267,21 +1270,30 @@ class ContentUpdateScheduler
     public static function check_and_publish_overdue_posts() {
         error_log("Checking for overdue posts to publish");
         global $wpdb;
-        $current_time = current_time('timestamp');
-        
+
+        // Get the WordPress timezone setting
+        $wp_timezone = wp_timezone();
+        $current_time = new DateTime('now', $wp_timezone);
+        $current_timestamp = $current_time->getTimestamp();
+
+        error_log("Current time in WordPress timezone: " . $current_time->format('Y-m-d H:i:s'));
+
         $overdue_posts = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT post_id FROM {$wpdb->postmeta} 
-                WHERE meta_key = %s 
-                AND meta_value <= %d",
-                self::$_cus_publish_status . '_pubdate',
-                $current_time
+                "SELECT post_id, meta_value FROM {$wpdb->postmeta} 
+                WHERE meta_key = %s",
+                self::$_cus_publish_status . '_pubdate'
             )
         );
 
         foreach ($overdue_posts as $post) {
-            error_log("Publishing overdue post ID: " . $post->post_id);
-            self::cron_publish_post($post->post_id);
+            $scheduled_time = new DateTime('@' . $post->meta_value, $wp_timezone);
+            error_log("Post ID: " . $post->post_id . " scheduled for: " . $scheduled_time->format('Y-m-d H:i:s'));
+
+            if ($scheduled_time <= $current_time) {
+                error_log("Publishing overdue post ID: " . $post->post_id);
+                self::cron_publish_post($post->post_id);
+            }
         }
     }
 }
