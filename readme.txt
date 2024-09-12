@@ -50,6 +50,10 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 
 == Changelog ==
 
+= 2.3.2 =
+* fix: Implement locking and transaction-like mechanism in publish_post
+* fix: Use WordPress timezone for scheduling and publishing
+
 = 2.3.1 =
 * WordPress 6.6.1 fix/workaround: Implemented custom cron job to check and publish overdue scheduled posts
 
