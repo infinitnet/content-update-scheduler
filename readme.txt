@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 5.0
 Tested up to: 6.6.1
-Stable tag: 2.3.2
+Stable tag: 2.3.3
 Requires PHP: 7.3
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -49,6 +49,10 @@ Each page and post has a 'Scheduled Content Update' link in the overview, which 
 Yes, it has been tested with Elementor and Oxygen Builder. It may also work with other page builders.
 
 == Changelog ==
+
+= 2.3.3 =
+* fix: Properly handle timezone when saving publication date
+* refactor: Improve copy_meta_and_terms method to handle serialized and JSON data
 
 = 2.3.2 =
 * fix: Implement locking and transaction-like mechanism in publish_post
