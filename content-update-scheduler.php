@@ -823,9 +823,36 @@ class ContentUpdateScheduler
      *
      * @return void
      */
+    /**
+     * Helper method to properly copy meta values while preserving their format
+     * 
+     * @param mixed $value The meta value to process
+     * @return mixed The processed meta value
+     */
+    private static function copy_meta_value($value) {
+        // If the value is serialized, handle it carefully
+        if (is_serialized($value)) {
+            $unserialized = maybe_unserialize($value);
+            if ($unserialized === false) {
+                return $value; // Return original if unserialization fails
+            }
+            return $unserialized;
+        }
+
+        // Check if value is JSON encoded (Elementor uses this)
+        if (is_string($value) && substr($value, 0, 1) === '{' && substr($value, -1) === '}') {
+            $json_decoded = json_decode($value, true);
+            if (json_last_error() === JSON_ERROR_NONE) {
+                // If it's valid JSON, store the raw value to preserve Unicode escapes
+                return $value;
+            }
+        }
+
+        return $value;
+    }
+
     public static function copy_meta_and_terms($source_post_id, $destination_post_id, $restore_references = false)
     {
-
         $source_post = get_post($source_post_id);
         $destination_post = get_post($destination_post_id);
 
@@ -834,37 +861,23 @@ class ContentUpdateScheduler
             return;
         }
 
-        /*
-         * remove all meta from the destination,
-         * initialize to emptyarray if not set to prevent error in foreach loop
-         */
-
-        // now for copying the metadata to the new post.
+        // Copy meta
         $meta = get_post_meta($source_post->ID);
         foreach ($meta as $key => $values) {
-            delete_post_meta($destination_post->ID, $key); // Delete existing meta to avoid duplicates
+            delete_post_meta($destination_post->ID, $key);
             foreach ($values as $value) {
-                if (is_serialized($value)) {
-                    $value = preg_replace_callback('/O:\d+:"([^"]+)"/', function ($matches) {
-                        return class_exists($matches[1]) ? $matches[0] : 'O:8:"stdClass"';
-                    }, $value);
-                    
-                    $unserialized_value = maybe_unserialize($value);
-                    
-                    if (is_string($unserialized_value) && strpos($unserialized_value, 'O:8:"stdClass"') !== false) {
-                        // Skip this meta entry if it contains undefined objects
-                        error_log('Skipping meta entry for key: ' . $key . '. Unserialized value contains undefined objects.');
-                        continue 2;
-                    }
-                } else {
-                    $unserialized_value = $value;
+                $processed_value = self::copy_meta_value($value);
+                
+                if ($restore_references && is_string($processed_value) && 
+                    strpos($processed_value, (string)$source_post->ID) !== false) {
+                    $processed_value = str_replace(
+                        (string)$source_post->ID, 
+                        (string)$destination_post->ID, 
+                        $processed_value
+                    );
                 }
                 
-                if ($restore_references && is_string($unserialized_value) && strpos($unserialized_value, (string)$source_post->ID) !== false) {
-                    $unserialized_value = str_replace((string)$source_post->ID, (string)$destination_post->ID, $unserialized_value);
-                }
-                
-                add_post_meta($destination_post->ID, $key, $unserialized_value);
+                add_post_meta($destination_post->ID, $key, $processed_value);
             }
         }
 
