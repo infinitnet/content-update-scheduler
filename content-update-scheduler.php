@@ -923,7 +923,10 @@ class ContentUpdateScheduler
 
                 error_log("Date components: Year: $year, Month: $month, Day: $day, Time: $time");
 
+                // Get WordPress timezone
                 $tz = wp_timezone();
+                
+                // Create date string and explicitly set timezone
                 $date_string = sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
                 $date_time = DateTime::createFromFormat('Y-m-d H:i', $date_string, $tz);
 
@@ -932,6 +935,8 @@ class ContentUpdateScheduler
                     return $post_id;
                 }
 
+                // Convert to UTC before getting timestamp
+                $date_time->setTimezone(new DateTimeZone('UTC'));
                 $stamp = $date_time->getTimestamp();
 
                 error_log("Calculated timestamp: $stamp");
