@@ -588,6 +588,18 @@ class ContentUpdateScheduler
                     ?>
                 </div>
             </p>
+            <div class="misc-pub-section">
+                <label>
+                    <input type="checkbox" 
+                           name="<?php echo esc_attr(self::$_cus_publish_status); ?>_keep_dates" 
+                           id="<?php echo esc_attr(self::$_cus_publish_status); ?>_keep_dates"
+                           <?php checked(get_post_meta($post->ID, self::$_cus_publish_status . '_keep_dates', true), 'yes'); ?>>
+                    <?php esc_html_e('Keep original publication date', 'cus-scheduleupdate-td'); ?>
+                </label>
+                <p class="description">
+                    <?php esc_html_e('If checked, the original publication date will be preserved when this update is published.', 'cus-scheduleupdate-td'); ?>
+                </p>
+            </div>
         </div>
         <script type="text/javascript">
         function initContentUpdateScheduler() {
