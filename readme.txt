@@ -52,13 +52,13 @@ Yes, it has been tested with Elementor and Oxygen Builder. It may also work with
 
 You can use below filter to exclude post types:
 
-```
+`
 add_filter('content_update_scheduler_excluded_post_types', function($excluded_post_types) {
     // Replace EXCLUDE_THIS with the name of the post type you want to exclude
     $excluded_post_types[] = 'EXCLUDE_THIS';
     return array_unique($excluded_post_types);
     });
-```
+`
 
 == Changelog ==
 
