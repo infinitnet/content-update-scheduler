@@ -986,6 +986,14 @@ class ContentUpdateScheduler
                     error_log("Successfully scheduled event for timestamp: $stamp");
                 }
                 
+                // Save keep_dates preference
+                $keep_dates_key = self::$_cus_publish_status . '_keep_dates';
+                if (isset($_POST[$keep_dates_key])) {
+                    update_post_meta($post_id, $keep_dates_key, 'yes');
+                } else {
+                    delete_post_meta($post_id, $keep_dates_key);
+                }
+
                 // Verify the event was scheduled
                 $next_scheduled = wp_next_scheduled('cus_publish_post', array($post_id));
                 if ($next_scheduled === false) {
