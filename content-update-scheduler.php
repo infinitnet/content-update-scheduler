@@ -226,18 +226,37 @@ class ContentUpdateScheduler
         self::$_cus_publish_metabox = __('Scheduled Content Update', 'cus-scheduleupdate-td');
         self::register_post_status();
 
+        // Get all public post types plus 'product' (maintaining existing behavior)
         $post_types = array_merge(
             get_post_types(array('public' => true), 'names'), 
             array('product')
         );
-        
+
+        /**
+         * Filter to exclude specific post types from content update scheduling
+         * 
+         * @param array $excluded_post_types Array of post type names to exclude
+         * @return array Modified array of post type names to exclude
+         */
+        $excluded_post_types = apply_filters('content_update_scheduler_excluded_post_types', array());
+
+        // Ensure excluded_post_types is an array
+        $excluded_post_types = is_array($excluded_post_types) ? $excluded_post_types : array();
+
+        // Remove excluded post types
+        $post_types = array_diff($post_types, $excluded_post_types);
+
+        // Remove duplicates and ensure valid post types
+        $post_types = array_unique($post_types);
         foreach ($post_types as $post_type) {
-            add_filter('manage_edit-' . $post_type . '_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
-            add_action('manage_' . $post_type . '_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
-            add_action('add_meta_boxes', array( 'ContentUpdateScheduler', 'add_meta_boxes_page' ), 10, 2);
+            if (post_type_exists($post_type)) {
+                add_filter('manage_edit-' . $post_type . '_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
+                add_action('manage_' . $post_type . '_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
+                add_action('add_meta_boxes', array( 'ContentUpdateScheduler', 'add_meta_boxes_page' ), 10, 2);
+            }
         }
 
-        // Specific filter for WooCommerce products
+        // Specific filter for WooCommerce products (maintaining existing behavior)
         add_filter('manage_edit-product_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
         add_action('manage_product_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
 
