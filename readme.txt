@@ -2,9 +2,9 @@
 Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 5.0
-Tested up to: 6.6.1
-Stable tag: 2.3.3
-Requires PHP: 7.3
+Tested up to: 6.7
+Stable tag: 2.3.4
+Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
 
@@ -48,7 +48,23 @@ Each page and post has a 'Scheduled Content Update' link in the overview, which 
 
 Yes, it has been tested with Elementor and Oxygen Builder. It may also work with other page builders.
 
+= How can I exclude post types from Content Update Scheduler?
+
+You can use below filter to exclude post types:
+
+```
+add_filter('content_update_scheduler_excluded_post_types', function($excluded_post_types) {
+    // Replace EXCLUDE_THIS with the name of the post type you want to exclude
+    $excluded_post_types[] = 'EXCLUDE_THIS';
+    return array_unique($excluded_post_types);
+    });
+```
+
 == Changelog ==
+
+= 2.3.4 =
+* feat: Add per-post option to preserve original publication date
+* refactor: Enhance custom post type support with opt-out filter mechanism
 
 = 2.3.3 =
 * fix: Properly handle timezone when saving publication date
