@@ -779,6 +779,9 @@ class ContentUpdateScheduler
 
         // and finally referencing the original post.
         update_post_meta($new_post_id, self::$_cus_publish_status . '_original', $original);
+        
+        // Ensure the keep_dates setting is not copied from previous scheduled updates
+        delete_post_meta($new_post_id, self::$_cus_publish_status . '_keep_dates');
 
         // Handle WooCommerce products
         if (class_exists('WooCommerce') && $post->post_type === 'product') {
@@ -1084,19 +1087,33 @@ class ContentUpdateScheduler
             $post->guid = $orig->guid;
             $post->post_parent = $orig->post_parent;
             $post->post_status = $orig->post_status;
-            $post_date = wp_date('Y-m-d H:i:s');
+            
+            $keep_dates = get_post_meta($post_id, self::$_cus_publish_status . '_keep_dates', true) === 'yes';
 
-            /**
-             * Filter the new posts' post date
-             *
-             * @param string  $post_date the date to be used, must be in the form of `Y-m-d H:i:s`.
-             * @param WP_Post $post      the scheduled update post.
-             * @param WP_Post $orig      the original post.
-             */
-            $post_date = apply_filters('ContentUpdateScheduler\\publish_post_date', $post_date, $post, $orig);
+            if ($keep_dates) {
+                // Keep original dates but update modified date
+                $post->post_date = $orig->post_date;
+                $post->post_date_gmt = $orig->post_date_gmt;
+                $post->post_modified = wp_date('Y-m-d H:i:s');
+                $post->post_modified_gmt = get_gmt_from_date($post->post_modified);
+            } else {
+                // Use new dates
+                $post_date = wp_date('Y-m-d H:i:s');
+                
+                /**
+                 * Filter the new posts' post date
+                 *
+                 * @param string  $post_date the date to be used, must be in the form of `Y-m-d H:i:s`.
+                 * @param WP_Post $post      the scheduled update post.
+                 * @param WP_Post $orig      the original post.
+                 */
+                $post_date = apply_filters('ContentUpdateScheduler\\publish_post_date', $post_date, $post, $orig);
 
-            $post->post_date = $post_date;
-            $post->post_date_gmt = get_gmt_from_date($post_date);
+                $post->post_date = $post_date;
+                $post->post_date_gmt = get_gmt_from_date($post_date);
+                $post->post_modified = $post_date;
+                $post->post_modified_gmt = $post->post_date_gmt;
+            }
 
             delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
 
