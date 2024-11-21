@@ -7,7 +7,7 @@
  * Description: Schedule content updates for any page or post type.
  * Author: Infinitnet
  * Author URI: https://infinitnet.io/
- * Version: 2.3.3
+ * Version: 2.3.4
  * License: GPLv3
  * Text Domain: content-update-scheduler
  *
