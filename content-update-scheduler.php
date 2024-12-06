@@ -885,51 +885,72 @@ class ContentUpdateScheduler
         return $value;
     }
 
-    public static function copy_meta_and_terms($source_post_id, $destination_post_id, $restore_references = false)
+    /**
+     * Copies meta and terms from one post to another
+     *
+     * @param int  $source_post_id      The post from which to copy.
+     * @param int  $destination_post_id The post which will get the meta and terms.
+     * @param bool $restore_references  Whether to restore references to the original post ID.
+     *
+     * @return void
+     */
+    private static function copy_meta_and_terms($source_post_id, $destination_post_id, $restore_references = false) 
     {
         $source_post = get_post($source_post_id);
         $destination_post = get_post($destination_post_id);
 
-        // abort if any of the ids is not a post.
-        if (! $source_post || ! $destination_post) {
+        // Abort if any of the ids is not a post.
+        if (!$source_post || !$destination_post) {
             return;
         }
 
-        // Copy meta
-        $meta = get_post_meta($source_post->ID);
-        foreach ($meta as $key => $values) {
-            delete_post_meta($destination_post->ID, $key);
-            foreach ($values as $value) {
-                $processed_value = self::copy_meta_value($value);
-                
-                if ($restore_references && is_string($processed_value) && 
-                    strpos($processed_value, (string)$source_post->ID) !== false) {
-                    $processed_value = str_replace(
-                        (string)$source_post->ID, 
-                        (string)$destination_post->ID, 
-                        $processed_value
-                    );
-                }
-                
-                add_post_meta($destination_post->ID, $key, $processed_value);
-            }
+        // Store current kses status and temporarily disable filters.
+        $should_filter = ! current_filter('content_save_pre');
+        if ($should_filter) {
+            remove_filter('content_save_pre', 'wp_filter_post_kses');
+            remove_filter('db_insert_value', 'wp_filter_kses');
         }
 
-
-        // and now for copying the terms.
-        $taxonomies = get_object_taxonomies($source_post->post_type);
-        foreach ($taxonomies as $taxonomy) {
-            $post_terms = wp_get_object_terms($source_post->ID, $taxonomy, array(
-                'orderby' => 'term_order',
-            ));
-            $terms = array();
-            foreach ($post_terms as $term) {
-                $terms[] = $term->slug;
+        try {
+            // Copy meta.
+            $meta = get_post_meta($source_post->ID);
+            foreach ($meta as $key => $values) {
+                delete_post_meta($destination_post->ID, $key);
+                foreach ($values as $value) {
+                    $processed_value = self::copy_meta_value($value);
+                    
+                    if ($restore_references && is_string($processed_value) && 
+                        strpos($processed_value, (string)$source_post->ID) !== false) {
+                        $processed_value = str_replace(
+                            (string)$source_post->ID, 
+                            (string)$destination_post->ID, 
+                            $processed_value
+                        );
+                    }
+                    
+                    add_post_meta($destination_post->ID, $key, $processed_value);
+                }
             }
-            // reset taxonomy to empty.
-            wp_set_object_terms($destination_post->ID, null, $taxonomy);
-            // then add new terms.
-            wp_set_object_terms($destination_post->ID, $terms, $taxonomy);
+
+            // Copy terms.
+            $taxonomies = get_object_taxonomies($source_post->post_type);
+            foreach ($taxonomies as $taxonomy) {
+                $post_terms = wp_get_object_terms($source_post->ID, $taxonomy, array(
+                    'orderby' => 'term_order',
+                ));
+                $terms = array();
+                foreach ($post_terms as $term) {
+                    $terms[] = $term->slug;
+                }
+                wp_set_object_terms($destination_post->ID, null, $taxonomy);
+                wp_set_object_terms($destination_post->ID, $terms, $taxonomy);
+            }
+        } finally {
+            // Restore filters if they were active.
+            if ($should_filter) {
+                add_filter('content_save_pre', 'wp_filter_post_kses');
+                add_filter('db_insert_value', 'wp_filter_kses');
+            }
         }
     }
 
