@@ -87,40 +87,117 @@ class ContentUpdateScheduler
     }
 
     /**
-     * Handles the CSS copying for Elementor and Oxygen plugins.
-     *
-     * @param int $source_post_id The source post ID.
-     * @param int $destination_post_id The destination post ID.
-     *
-     * @return void
+     * Copies Elementor-specific data between posts
+     * 
+     * @param int $source_id Source post ID
+     * @param int $destination_id Destination post ID
+     * @return bool Success status
      */
-    private static function handle_plugin_css_copy($source_post_id, $destination_post_id)
-    {
-        // Elementor plugin active.
-        if (in_array('elementor/elementor.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-            $upload_dir = wp_upload_dir();
-            $source_css = $upload_dir['basedir'] . '/elementor/css/post-' . $source_post_id . '.css';
-            $destination_css = $upload_dir['basedir'] . '/elementor/css/post-' . $destination_post_id . '.css';
-
-            if (file_exists($source_css)) {
-                copy($source_css, $destination_css);
-            }
-
+    private static function copy_elementor_data($source_id, $destination_id) {
+        // Early exit if Elementor isn't active
+        if (!defined('ELEMENTOR_VERSION')) {
+            return false;
         }
 
-        // Oxygen plugin active.
-        if (in_array('oxygen/functions.php', apply_filters('active_plugins', get_option('active_plugins')))) {
-            $upload_dir = wp_upload_dir();
-            $dir = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field('post_name', $source_post_id) . '-' . $source_post_id . '.css';
-            $chdir = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field('post_name', $destination_post_id) . '-' . $destination_post_id . '.css';
+        try {
+            // Core Elementor meta keys that must be preserved
+            $elementor_meta_keys = [
+                '_elementor_data',
+                '_elementor_edit_mode', 
+                '_elementor_page_settings',
+                '_elementor_version',
+                '_elementor_template_type',
+                '_elementor_controls_usage'
+            ];
 
-            if (!file_exists($chdir)) {
-                fopen($chdir, "w");
+            // Get all meta at once for efficiency
+            $source_meta = get_post_meta($source_id);
+            
+            foreach ($elementor_meta_keys as $key) {
+                if (!isset($source_meta[$key][0])) {
+                    continue;
+                }
+
+                $value = $source_meta[$key][0];
+                
+                // Special handling for Elementor's JSON data
+                if ($key === '_elementor_data') {
+                    // Ensure valid JSON 
+                    $decoded = json_decode($value);
+                    if (json_last_error() === JSON_ERROR_NONE) {
+                        // Preserve exact JSON structure with proper slashing
+                        update_post_meta($destination_id, $key, wp_slash($value));
+                    } else {
+                        error_log(sprintf(
+                            'Content Update Scheduler: Invalid Elementor JSON in post %d',
+                            $source_id
+                        ));
+                    }
+                    continue;
+                }
+
+                // Copy other Elementor meta directly
+                update_post_meta($destination_id, $key, maybe_unserialize($value));
             }
-            if (!file_exists($dir)) {
-                fopen($dir, "w");
+
+            // Copy Elementor CSS file
+            $upload_dir = wp_upload_dir();
+            $source_css = $upload_dir['basedir'] . '/elementor/css/post-' . $source_id . '.css';
+            $dest_css = $upload_dir['basedir'] . '/elementor/css/post-' . $destination_id . '.css';
+            
+            if (file_exists($source_css)) {
+                @copy($source_css, $dest_css);
             }
-            copy($dir, $chdir);
+
+            return true;
+
+        } catch (Exception $e) {
+            error_log(sprintf(
+                'Content Update Scheduler: Error copying Elementor data: %s',
+                $e->getMessage()
+            ));
+            return false;
+        }
+    }
+
+    /**
+     * Handles the Oxygen builder CSS copying
+     *
+     * @param int $source_id Source post ID
+     * @param int $destination_id Destination post ID
+     * @return bool Success status
+     */
+    private static function copy_oxygen_data($source_id, $destination_id) {
+        // Early exit if Oxygen isn't active
+        if (!in_array('oxygen/functions.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+            return false;
+        }
+
+        try {
+            $upload_dir = wp_upload_dir();
+            $source_css = $upload_dir['basedir'] . '/oxygen/css/' . 
+                         get_post_field('post_name', $source_id) . '-' . $source_id . '.css';
+            $dest_css = $upload_dir['basedir'] . '/oxygen/css/' . 
+                       get_post_field('post_name', $destination_id) . '-' . $destination_id . '.css';
+
+            // Create destination file if it doesn't exist
+            if (!file_exists($dest_css)) {
+                @touch($dest_css);
+            }
+
+            // Copy CSS if source exists
+            if (file_exists($source_css)) {
+                @copy($source_css, $dest_css);
+            }
+
+            return true;
+
+        } catch (Exception $e) {
+            error_log(sprintf(
+                'Content Update Scheduler: Error copying Oxygen data: %s',
+                $e->getMessage()
+            ));
+            return false;
         }
     }
 
@@ -803,7 +880,8 @@ class ContentUpdateScheduler
             return $new_post_id;
         }
 
-        self::handle_plugin_css_copy($post->ID, $new_post_id);
+        self::copy_elementor_data($post->ID, $new_post_id);
+        self::copy_oxygen_data($post->ID, $new_post_id);
 
         // copy meta and terms over to the new post.
         self::copy_meta_and_terms($post->ID, $new_post_id);
@@ -1124,7 +1202,8 @@ class ContentUpdateScheduler
             $original_stock_status = get_post_meta($orig->ID, '_stock_status', true);
             $original_stock_quantity = get_post_meta($orig->ID, '_stock', true);
 
-            self::handle_plugin_css_copy($post->ID, $orig_id);
+            self::copy_elementor_data($post->ID, $orig_id);
+            self::copy_oxygen_data($post->ID, $orig_id);
 
             /**
              * Fires before a scheduled post is being updated
