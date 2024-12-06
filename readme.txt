@@ -2,8 +2,8 @@
 Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 5.0
-Tested up to: 6.7
-Stable tag: 2.3.4
+Tested up to: 6.7.1
+Stable tag: 2.3.5
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -61,6 +61,11 @@ add_filter('content_update_scheduler_excluded_post_types', function($excluded_po
 `
 
 == Changelog ==
+
+= 2.3.5 =
+* refactor: Improve meta and terms copying with filter management and visibility
+* refactor: Improve Elementor and Oxygen data copying with focused, robust methods
+* refactor: Add WPML relationship handling for duplicated posts
 
 = 2.3.4 =
 * feat: Add per-post option to preserve original publication date
