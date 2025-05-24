@@ -43,18 +43,6 @@ class ContentUpdateScheduler_Options
         );
 
         add_settings_field(
-            'tsu_field_nodate',
-            __('No Date Set', 'cus-scheduleupdate-td'),
-            array( __CLASS__, 'field_nodate_cb' ),
-            'tsu',
-            'tsu_section',
-            array(
-                'label_for' => 'tsu_nodate',
-                'class'     => 'tsu_row',
-            )
-        );
-
-        add_settings_field(
             'tsu_field_visible',
             __('Post Visibility', 'cus-scheduleupdate-td'),
             array( __CLASS__, 'field_visible_cb' ),
@@ -152,27 +140,6 @@ class ContentUpdateScheduler_Options
      *
      * @return void
      */
-    public static function field_nodate_cb($args)
-    {
-        $options = get_option('tsu_options');
-        ?>
-        <select id="<?php echo esc_attr($args['label_for']); ?>"
-                name="tsu_options[<?php echo esc_attr($args['label_for']); ?>]"
-        >
-            <option value="publish" <?php echo isset($options[ $args['label_for'] ]) ? ( selected($options[ $args['label_for'] ], 'publish', false) ) : ( '' ); ?>>
-                <?php echo esc_html(__('Publish right away', 'cus-scheduleupdate-td')); ?>
-            </option>
-            <option value="nothing" <?php echo isset($options[ $args['label_for'] ]) ? ( selected($options[ $args['label_for'] ], 'nothing', false) ) : ( '' ); ?>>
-                <?php echo esc_html(__('Don\'t publish', 'cus-scheduleupdate-td')); ?>
-            </option>
-        </select>
-        <p class="description">
-            <?php echo esc_html(__('What should happen to a post if it is saved with no date set?', 'cus-scheduleupdate-td')); ?>
-        </p>
-
-        <?php
-    }
-
     /**
      * Renders a checkbox field.
      *

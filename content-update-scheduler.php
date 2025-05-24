@@ -7,7 +7,7 @@
  * Description: Schedule content updates for any page or post type.
  * Author: Infinitnet
  * Author URI: https://infinitnet.io/
- * Version: 2.3.5
+ * Version: 2.3.6
  * License: GPLv3
  * Text Domain: content-update-scheduler
  *
@@ -581,7 +581,11 @@ class ContentUpdateScheduler
         $copy = '?action=workflow_copy_to_publish&post=' . $post->ID . '&n=' . wp_create_nonce('workflow_copy_to_publish' . $post->ID);
         if ($post->post_status === self::$_cus_publish_status) {
             $action = '?action=workflow_publish_now&post=' . $post->ID . '&n=' . wp_create_nonce('workflow_publish_now' . $post->ID);
-            $actions['publish_now'] = '<a href="' . admin_url('admin.php' . $action) . '">' . __('Publish Now', 'cus-scheduleupdate-td') . '</a>';
+            
+            // Only show "Publish Now" to users who can publish posts
+            if (current_user_can('publish_posts')) {
+                $actions['publish_now'] = '<a href="' . admin_url('admin.php' . $action) . '">' . __('Publish Now', 'cus-scheduleupdate-td') . '</a>';
+            }
             $actions['copy_to_publish'] = '<a href="' . admin_url('admin.php' . $copy) . '">' . self::$cus_publish_label . '</a>';
             if (ContentUpdateScheduler_Options::get('tsu_recursive')) {
                 $actions['copy_to_publish'] = '<a href="' . admin_url('admin.php' . $copy) . '">' . __('Schedule recursive', 'cus-scheduleupdate-td') . '</a>';
@@ -668,6 +672,12 @@ class ContentUpdateScheduler
     {
         if (isset($_REQUEST['n'], $_REQUEST['post']) && wp_verify_nonce(sanitize_key($_REQUEST['n']), 'workflow_publish_now' . absint($_REQUEST['post']))) {
             $post = get_post(absint(wp_unslash($_REQUEST['post'])));
+            
+            // Check if user has permission to publish posts
+            if (!current_user_can('publish_posts')) {
+                wp_die(__('You do not have permission to publish content.', 'cus-scheduleupdate-td'));
+            }
+            
             self::publish_post($post->ID);
             wp_redirect(admin_url('edit.php?post_type=' . $post->post_type));
             exit;
@@ -737,6 +747,9 @@ class ContentUpdateScheduler
             <p>
                 <strong><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></strong>
             </p>
+            <p class="description">
+                <?php esc_html_e('This schedules an UPDATE to existing content. The original post remains published with its current date.', 'cus-scheduleupdate-td'); ?>
+            </p>
             <div class="components-datetime">
                 <div class="components-datetime__date">
                     <select name="<?php echo esc_attr($metaname); ?>_month" id="<?php echo esc_attr($metaname); ?>_month">
@@ -766,11 +779,7 @@ class ContentUpdateScheduler
                 <div id="pastmsg" style="color:red; display:none;">
                     <?php
                     echo esc_html__('The release date is in the past.', 'cus-scheduleupdate-td');
-                    if (ContentUpdateScheduler_Options::get('tsu_nodate') === 'nothing') {
-                        echo esc_html__('This post will not be published.', 'cus-scheduleupdate-td');
-                    } else {
-                        echo esc_html__('This post will be published 5 minutes from now.', 'cus-scheduleupdate-td');
-                    }
+                    echo esc_html__(' This post will be published 5 minutes from now.', 'cus-scheduleupdate-td');
                     ?>
                 </div>
             </p>
