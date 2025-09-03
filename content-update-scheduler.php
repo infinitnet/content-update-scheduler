@@ -1583,6 +1583,297 @@ class ContentUpdateScheduler
             }
         }
     }
+
+    /**
+     * Initialize homepage scheduling functionality
+     */
+    public static function init_homepage_scheduling() {
+        add_action('admin_menu', array(__CLASS__, 'add_homepage_scheduling_page'));
+        add_action('wp_ajax_schedule_homepage_change', array(__CLASS__, 'handle_homepage_scheduling'));
+        add_action('wp_ajax_cancel_homepage_change', array(__CLASS__, 'handle_cancel_homepage_change'));
+        add_action('cus_change_homepage', array(__CLASS__, 'cron_change_homepage'));
+    }
+
+    /**
+     * Add homepage scheduling admin page
+     */
+    public static function add_homepage_scheduling_page() {
+        add_submenu_page(
+            'options-general.php',
+            __('Schedule Homepage Changes', 'cus-scheduleupdate-td'),
+            __('Schedule Homepage', 'cus-scheduleupdate-td'),
+            'manage_options',
+            'schedule-homepage',
+            array(__CLASS__, 'homepage_scheduling_page')
+        );
+    }
+
+    /**
+     * Render homepage scheduling page
+     */
+    public static function homepage_scheduling_page() {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        // Get available pages for homepage
+        $pages = get_pages(array(
+            'post_status' => array('publish', 'cus_sc_publish')
+        ));
+
+        // Get scheduled homepage changes
+        $scheduled_changes = self::get_scheduled_homepage_changes();
+
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            
+            <div class="card">
+                <h2><?php _e('Schedule New Homepage Change', 'cus-scheduleupdate-td'); ?></h2>
+                <form id="schedule-homepage-form">
+                    <?php wp_nonce_field('schedule_homepage_change', 'homepage_nonce'); ?>
+                    
+                    <table class="form-table">
+                        <tr>
+                            <th scope="row">
+                                <label for="new_homepage"><?php _e('New Homepage', 'cus-scheduleupdate-td'); ?></label>
+                            </th>
+                            <td>
+                                <select name="new_homepage" id="new_homepage" required>
+                                    <option value=""><?php _e('Select a page...', 'cus-scheduleupdate-td'); ?></option>
+                                    <?php foreach ($pages as $page): ?>
+                                        <option value="<?php echo esc_attr($page->ID); ?>">
+                                            <?php echo esc_html($page->post_title); ?>
+                                            <?php if ($page->post_status === 'cus_sc_publish'): ?>
+                                                (<?php _e('Scheduled Update', 'cus-scheduleupdate-td'); ?>)
+                                            <?php endif; ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th scope="row">
+                                <label for="schedule_date"><?php _e('Schedule Date', 'cus-scheduleupdate-td'); ?></label>
+                            </th>
+                            <td>
+                                <input type="date" name="schedule_date" id="schedule_date" required>
+                                <input type="time" name="schedule_time" id="schedule_time" required>
+                                <p class="description"><?php _e('Date and time when the homepage should change', 'cus-scheduleupdate-td'); ?></p>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <p class="submit">
+                        <button type="submit" class="button button-primary"><?php _e('Schedule Homepage Change', 'cus-scheduleupdate-td'); ?></button>
+                    </p>
+                </form>
+            </div>
+
+            <?php if (!empty($scheduled_changes)): ?>
+            <div class="card">
+                <h2><?php _e('Scheduled Homepage Changes', 'cus-scheduleupdate-td'); ?></h2>
+                <table class="wp-list-table widefat fixed striped">
+                    <thead>
+                        <tr>
+                            <th><?php _e('New Homepage', 'cus-scheduleupdate-td'); ?></th>
+                            <th><?php _e('Scheduled Date', 'cus-scheduleupdate-td'); ?></th>
+                            <th><?php _e('Actions', 'cus-scheduleupdate-td'); ?></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($scheduled_changes as $change): ?>
+                        <tr>
+                            <td><?php echo esc_html(get_the_title($change['page_id'])); ?></td>
+                            <td><?php echo esc_html(self::get_pubdate($change['timestamp'])); ?></td>
+                            <td>
+                                <a href="#" class="button button-small cancel-homepage-change" 
+                                   data-timestamp="<?php echo esc_attr($change['timestamp']); ?>"
+                                   data-page-id="<?php echo esc_attr($change['page_id']); ?>">
+                                    <?php _e('Cancel', 'cus-scheduleupdate-td'); ?>
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+            <?php endif; ?>
+        </div>
+
+        <script>
+        jQuery(document).ready(function($) {
+            $('#schedule-homepage-form').on('submit', function(e) {
+                e.preventDefault();
+                
+                var formData = {
+                    action: 'schedule_homepage_change',
+                    page_id: $('#new_homepage').val(),
+                    schedule_date: $('#schedule_date').val(),
+                    schedule_time: $('#schedule_time').val(),
+                    homepage_nonce: $('[name="homepage_nonce"]').val()
+                };
+                
+                $.post(ajaxurl, formData, function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.data);
+                    }
+                });
+            });
+            
+            $('.cancel-homepage-change').on('click', function(e) {
+                e.preventDefault();
+                
+                if (!confirm('<?php _e('Are you sure you want to cancel this scheduled homepage change?', 'cus-scheduleupdate-td'); ?>')) {
+                    return;
+                }
+                
+                var formData = {
+                    action: 'cancel_homepage_change',
+                    timestamp: $(this).data('timestamp'),
+                    page_id: $(this).data('page-id'),
+                    homepage_nonce: $('[name="homepage_nonce"]').val()
+                };
+                
+                $.post(ajaxurl, formData, function(response) {
+                    if (response.success) {
+                        location.reload();
+                    } else {
+                        alert('Error: ' + response.data);
+                    }
+                });
+            });
+        });
+        </script>
+        <?php
+    }
+
+    /**
+     * Handle AJAX request for scheduling homepage changes
+     */
+    public static function handle_homepage_scheduling() {
+        if (!current_user_can('manage_options')) {
+            wp_die(json_encode(array('success' => false, 'data' => 'Insufficient permissions')));
+        }
+
+        if (!wp_verify_nonce($_POST['homepage_nonce'], 'schedule_homepage_change')) {
+            wp_die(json_encode(array('success' => false, 'data' => 'Invalid nonce')));
+        }
+
+        $page_id = intval($_POST['page_id']);
+        $schedule_date = sanitize_text_field($_POST['schedule_date']);
+        $schedule_time = sanitize_text_field($_POST['schedule_time']);
+
+        if (empty($page_id) || empty($schedule_date) || empty($schedule_time)) {
+            wp_die(json_encode(array('success' => false, 'data' => 'Missing required fields')));
+        }
+
+        // Convert to timestamp using WordPress timezone
+        $tz = wp_timezone();
+        $date_string = $schedule_date . ' ' . $schedule_time;
+        $date_time = DateTime::createFromFormat('Y-m-d H:i', $date_string, $tz);
+
+        if ($date_time === false) {
+            wp_die(json_encode(array('success' => false, 'data' => 'Invalid date format')));
+        }
+
+        // Convert to UTC for scheduling
+        $date_time->setTimezone(new DateTimeZone('UTC'));
+        $timestamp = $date_time->getTimestamp();
+
+        // Schedule the homepage change
+        $scheduled = wp_schedule_single_event($timestamp, 'cus_change_homepage', array($page_id));
+        
+        if ($scheduled === false) {
+            wp_die(json_encode(array('success' => false, 'data' => 'Failed to schedule homepage change')));
+        }
+
+        // Store the scheduled change in options for display
+        $scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
+        $scheduled_changes[] = array(
+            'page_id' => $page_id,
+            'timestamp' => $timestamp,
+            'scheduled_at' => current_time('timestamp')
+        );
+        update_option('cus_scheduled_homepage_changes', $scheduled_changes);
+
+        wp_die(json_encode(array('success' => true, 'data' => 'Homepage change scheduled successfully')));
+    }
+
+    /**
+     * Handle AJAX request for canceling homepage changes
+     */
+    public static function handle_cancel_homepage_change() {
+        if (!current_user_can('manage_options')) {
+            wp_die(json_encode(array('success' => false, 'data' => 'Insufficient permissions')));
+        }
+
+        if (!wp_verify_nonce($_POST['homepage_nonce'], 'schedule_homepage_change')) {
+            wp_die(json_encode(array('success' => false, 'data' => 'Invalid nonce')));
+        }
+
+        $timestamp = intval($_POST['timestamp']);
+        $page_id = intval($_POST['page_id']);
+
+        // Remove from WordPress cron
+        wp_clear_scheduled_hook('cus_change_homepage', array($page_id));
+
+        // Remove from our stored changes
+        $scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
+        $scheduled_changes = array_filter($scheduled_changes, function($change) use ($timestamp, $page_id) {
+            return !($change['timestamp'] == $timestamp && $change['page_id'] == $page_id);
+        });
+        update_option('cus_scheduled_homepage_changes', $scheduled_changes);
+
+        wp_die(json_encode(array('success' => true, 'data' => 'Homepage change canceled successfully')));
+    }
+
+    /**
+     * Get scheduled homepage changes
+     */
+    public static function get_scheduled_homepage_changes() {
+        $scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
+        $current_time = current_time('timestamp');
+        
+        // Filter out past changes
+        $scheduled_changes = array_filter($scheduled_changes, function($change) use ($current_time) {
+            return $change['timestamp'] > $current_time;
+        });
+        
+        // Update the option to remove past changes
+        update_option('cus_scheduled_homepage_changes', $scheduled_changes);
+        
+        return $scheduled_changes;
+    }
+
+    /**
+     * Cron job to change homepage
+     */
+    public static function cron_change_homepage($page_id) {
+        error_log("Changing homepage to page ID: " . $page_id);
+        
+        // Verify the page exists and is published
+        $page = get_post($page_id);
+        if (!$page || $page->post_status !== 'publish') {
+            error_log("Cannot change homepage: Page $page_id is not published");
+            return;
+        }
+
+        // Update the homepage setting
+        update_option('show_on_front', 'page');
+        update_option('page_on_front', $page_id);
+        
+        // Remove from scheduled changes
+        $scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
+        $scheduled_changes = array_filter($scheduled_changes, function($change) use ($page_id) {
+            return $change['page_id'] != $page_id;
+        });
+        update_option('cus_scheduled_homepage_changes', $scheduled_changes);
+        
+        error_log("Homepage successfully changed to: " . $page->post_title);
+    }
 }
 
 add_action('save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2);
@@ -1600,9 +1891,10 @@ add_filter('post_row_actions', array( 'ContentUpdateScheduler', 'page_row_action
 add_filter('manage_pages_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
 add_filter('page_attributes_dropdown_pages_args', array( 'ContentUpdateScheduler', 'parent_dropdown_status' ));
 
-/* bhullar custom code */
+/* Homepage scheduling functionality */
 add_action('admin_init', function () {
-    //add_filter( 'wp_dropdown_pages', array( 'ContentUpdateScheduler', 'override_static_front_page_and_post_option' ), 1 , 2);
+    add_filter( 'wp_dropdown_pages', array( 'ContentUpdateScheduler', 'override_static_front_page_and_post_option' ), 1 , 2);
+    ContentUpdateScheduler::init_homepage_scheduling();
 });
 
 add_action('admin_footer', function (){ ?>
@@ -1632,4 +1924,8 @@ function cus_deactivation() {
     global $wpdb;
     $wpdb->query("DELETE FROM $wpdb->postmeta WHERE meta_key = 'cus_sc_publish_pubdate'");
     wp_clear_scheduled_hook('cus_check_overdue_posts');
+    
+    // Clear scheduled homepage changes
+    wp_clear_scheduled_hook('cus_change_homepage');
+    delete_option('cus_scheduled_homepage_changes');
 }
