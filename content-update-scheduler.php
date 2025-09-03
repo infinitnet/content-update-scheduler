@@ -25,6 +25,33 @@ require_once dirname( __FILE__ ) . '/options.php';
  */
 class ContentUpdateScheduler
 {
+    // Text domain constant
+    const TEXT_DOMAIN = 'cus-scheduleupdate-td';
+    
+    // WooCommerce meta key constants
+    const META_STOCK_STATUS = '_stock_status';
+    const META_STOCK_QUANTITY = '_stock';
+    const META_REGULAR_PRICE = '_regular_price';
+    const META_SALE_PRICE = '_sale_price';
+    const META_MANAGE_STOCK = '_manage_stock';
+    const META_BACKORDERS = '_backorders';
+    const META_PRODUCT_URL = '_product_url';
+    const META_BUTTON_TEXT = '_button_text';
+    const META_CHILDREN = '_children';
+    
+    // Elementor meta key constants
+    const META_ELEMENTOR_DATA = '_elementor_data';
+    const META_ELEMENTOR_EDIT_MODE = '_elementor_edit_mode';
+    const META_ELEMENTOR_PAGE_SETTINGS = '_elementor_page_settings';
+    const META_ELEMENTOR_VERSION = '_elementor_version';
+    const META_ELEMENTOR_TEMPLATE_TYPE = '_elementor_template_type';
+    const META_ELEMENTOR_CONTROLS_USAGE = '_elementor_controls_usage';
+    
+    // WPML meta key constants
+    const META_WPML_MEDIA_FEATURED = '_wpml_media_featured';
+    const META_WPML_MEDIA_DUPLICATE = '_wpml_media_duplicate';
+    const META_WPML_MEDIA_PROCESSED = '_wpml_media_processed';
+
     /**
      * Copies grouped products from one product to another.
      *
@@ -35,9 +62,9 @@ class ContentUpdateScheduler
      */
     private static function copy_grouped_products($source_product_id, $destination_product_id)
     {
-        $grouped_products = get_post_meta($source_product_id, '_children', true);
+        $grouped_products = get_post_meta($source_product_id, self::META_CHILDREN, true);
         if (!empty($grouped_products)) {
-            update_post_meta($destination_product_id, '_children', $grouped_products);
+            update_post_meta($destination_product_id, self::META_CHILDREN, $grouped_products);
         }
     }
 
@@ -51,14 +78,14 @@ class ContentUpdateScheduler
      */
     private static function copy_external_product($source_product_id, $destination_product_id)
     {
-        $product_url = get_post_meta($source_product_id, '_product_url', true);
-        $button_text = get_post_meta($source_product_id, '_button_text', true);
+        $product_url = get_post_meta($source_product_id, self::META_PRODUCT_URL, true);
+        $button_text = get_post_meta($source_product_id, self::META_BUTTON_TEXT, true);
 
         if (!empty($product_url)) {
-            update_post_meta($destination_product_id, '_product_url', $product_url);
+            update_post_meta($destination_product_id, self::META_PRODUCT_URL, $product_url);
         }
         if (!empty($button_text)) {
-            update_post_meta($destination_product_id, '_button_text', $button_text);
+            update_post_meta($destination_product_id, self::META_BUTTON_TEXT, $button_text);
         }
     }
 
@@ -72,23 +99,23 @@ class ContentUpdateScheduler
      */
     private static function copy_simple_product($source_product_id, $destination_product_id)
     {
-        $regular_price = get_post_meta($source_product_id, '_regular_price', true);
-        $sale_price = get_post_meta($source_product_id, '_sale_price', true);
-        $stock_status = get_post_meta($source_product_id, '_stock_status', true);
-        $stock_quantity = get_post_meta($source_product_id, '_stock', true);
-        $manage_stock = get_post_meta($source_product_id, '_manage_stock', true);
-        $backorders = get_post_meta($source_product_id, '_backorders', true);
+        $regular_price = get_post_meta($source_product_id, self::META_REGULAR_PRICE, true);
+        $sale_price = get_post_meta($source_product_id, self::META_SALE_PRICE, true);
+        $stock_status = get_post_meta($source_product_id, self::META_STOCK_STATUS, true);
+        $stock_quantity = get_post_meta($source_product_id, self::META_STOCK_QUANTITY, true);
+        $manage_stock = get_post_meta($source_product_id, self::META_MANAGE_STOCK, true);
+        $backorders = get_post_meta($source_product_id, self::META_BACKORDERS, true);
 
         if (!empty($regular_price)) {
-            update_post_meta($destination_product_id, '_regular_price', $regular_price);
+            update_post_meta($destination_product_id, self::META_REGULAR_PRICE, $regular_price);
         }
         if (!empty($sale_price)) {
-            update_post_meta($destination_product_id, '_sale_price', $sale_price);
+            update_post_meta($destination_product_id, self::META_SALE_PRICE, $sale_price);
         }
-        update_post_meta($destination_product_id, '_stock_status', $stock_status);
-        update_post_meta($destination_product_id, '_stock', $stock_quantity);
-        update_post_meta($destination_product_id, '_manage_stock', $manage_stock);
-        update_post_meta($destination_product_id, '_backorders', $backorders);
+        update_post_meta($destination_product_id, self::META_STOCK_STATUS, $stock_status);
+        update_post_meta($destination_product_id, self::META_STOCK_QUANTITY, $stock_quantity);
+        update_post_meta($destination_product_id, self::META_MANAGE_STOCK, $manage_stock);
+        update_post_meta($destination_product_id, self::META_BACKORDERS, $backorders);
     }
 
     /**
@@ -107,12 +134,12 @@ class ContentUpdateScheduler
         try {
             // Core Elementor meta keys that must be preserved
             $elementor_meta_keys = [
-                '_elementor_data',
-                '_elementor_edit_mode', 
-                '_elementor_page_settings',
-                '_elementor_version',
-                '_elementor_template_type',
-                '_elementor_controls_usage'
+                self::META_ELEMENTOR_DATA,
+                self::META_ELEMENTOR_EDIT_MODE,
+                self::META_ELEMENTOR_PAGE_SETTINGS,
+                self::META_ELEMENTOR_VERSION,
+                self::META_ELEMENTOR_TEMPLATE_TYPE,
+                self::META_ELEMENTOR_CONTROLS_USAGE
             ];
 
             // Get all meta at once for efficiency
@@ -126,17 +153,13 @@ class ContentUpdateScheduler
                 $value = $source_meta[$key][0];
                 
                 // Special handling for Elementor's JSON data
-                if ($key === '_elementor_data') {
+                if ($key === self::META_ELEMENTOR_DATA) {
                     // Ensure valid JSON 
                     $decoded = json_decode($value);
                     if (json_last_error() === JSON_ERROR_NONE) {
                         // Preserve exact JSON structure with proper slashing
                         update_post_meta($destination_id, $key, wp_slash($value));
                     } else {
-                        error_log(sprintf(
-                            'Content Update Scheduler: Invalid Elementor JSON in post %d',
-                            $source_id
-                        ));
                     }
                     continue;
                 }
@@ -157,10 +180,6 @@ class ContentUpdateScheduler
             return true;
 
         } catch (Exception $e) {
-            error_log(sprintf(
-                'Content Update Scheduler: Error copying Elementor data: %s',
-                $e->getMessage()
-            ));
             return false;
         }
     }
@@ -224,9 +243,9 @@ class ContentUpdateScheduler
 
             // Copy essential WPML meta
             $wpml_meta_keys = array(
-                '_wpml_media_featured',
-                '_wpml_media_duplicate',
-                '_wpml_media_processed'
+                self::META_WPML_MEDIA_FEATURED,
+                self::META_WPML_MEDIA_DUPLICATE,
+                self::META_WPML_MEDIA_PROCESSED
             );
 
             foreach ($wpml_meta_keys as $meta_key) {
@@ -252,12 +271,6 @@ class ContentUpdateScheduler
             return true;
 
         } catch (Exception $e) {
-            error_log(sprintf(
-                'Content Update Scheduler: WPML handling error for posts %d->%d: %s',
-                $source_id,
-                $destination_id,
-                $e->getMessage()
-            ));
             return false;
         }
     }
@@ -288,10 +301,6 @@ class ContentUpdateScheduler
             return true;
 
         } catch (Exception $e) {
-            error_log(sprintf(
-                'Content Update Scheduler: Error copying Oxygen data: %s',
-                $e->getMessage()
-            ));
             return false;
         }
     }
@@ -334,25 +343,25 @@ class ContentUpdateScheduler
             }
 
             // Ensure stock status, stock quantity, manage stock, and backorders are correctly copied
-            $original_stock_status = get_post_meta($variation->ID, '_stock_status', true);
-            $original_stock_quantity = get_post_meta($variation->ID, '_stock', true);
-            $original_manage_stock = get_post_meta($variation->ID, '_manage_stock', true);
-            $original_backorders = get_post_meta($variation->ID, '_backorders', true);
+            $original_stock_status = get_post_meta($variation->ID, self::META_STOCK_STATUS, true);
+            $original_stock_quantity = get_post_meta($variation->ID, self::META_STOCK_QUANTITY, true);
+            $original_manage_stock = get_post_meta($variation->ID, self::META_MANAGE_STOCK, true);
+            $original_backorders = get_post_meta($variation->ID, self::META_BACKORDERS, true);
 
             if ($original_stock_status !== '') {
-                update_post_meta($new_variation_id, '_stock_status', $original_stock_status);
+                update_post_meta($new_variation_id, self::META_STOCK_STATUS, $original_stock_status);
             }
 
             if ($original_stock_quantity !== '') {
-                update_post_meta($new_variation_id, '_stock', $original_stock_quantity);
+                update_post_meta($new_variation_id, self::META_STOCK_QUANTITY, $original_stock_quantity);
             }
             
             if ($original_manage_stock !== '') {
-                update_post_meta($new_variation_id, '_manage_stock', $original_manage_stock);
+                update_post_meta($new_variation_id, self::META_MANAGE_STOCK, $original_manage_stock);
             }
             
             if ($original_backorders !== '') {
-                update_post_meta($new_variation_id, '_backorders', $original_backorders);
+                update_post_meta($new_variation_id, self::META_BACKORDERS, $original_backorders);
             }
         }
     }
@@ -659,9 +668,21 @@ class ContentUpdateScheduler
                 exit;
             } else {
                 // translators: %1$s: post type, %2$s: post title.
-                $html  = sprintf(__('Could not schedule %1$s %2$s', 'cus-scheduleupdate-td'), $post->post_type, '<i>' . htmlspecialchars($post->post_title) . '</i>');
-                $html .= '<br><br>';
-                $html .= '<a href="' . esc_attr(admin_url('edit.php?post_type=' . $post->post_type)) . '">' . __('Back') . '</a>';
+                $html  = '<h1>' . __('Content Scheduling Failed', 'cus-scheduleupdate-td') . '</h1>';
+                $html .= '<p>' . sprintf(__('Unable to create a scheduled update for %1$s <strong>%2$s</strong>', 'cus-scheduleupdate-td'), $post->post_type, htmlspecialchars($post->post_title)) . '</p>';
+                $html .= '<h3>' . __('Possible reasons:', 'cus-scheduleupdate-td') . '</h3>';
+                $html .= '<ul>';
+                $html .= '<li>' . __('Insufficient disk space or memory limits', 'cus-scheduleupdate-td') . '</li>';
+                $html .= '<li>' . __('Database connection issues', 'cus-scheduleupdate-td') . '</li>';
+                $html .= '<li>' . __('Plugin conflicts or WordPress permission issues', 'cus-scheduleupdate-td') . '</li>';
+                $html .= '</ul>';
+                $html .= '<h3>' . __('What to try:', 'cus-scheduleupdate-td') . '</h3>';
+                $html .= '<ol>';
+                $html .= '<li>' . __('Check WordPress debug logs for specific error details', 'cus-scheduleupdate-td') . '</li>';
+                $html .= '<li>' . __('Ensure you have sufficient permissions for this post type', 'cus-scheduleupdate-td') . '</li>';
+                $html .= '<li>' . __('Try again in a few minutes', 'cus-scheduleupdate-td') . '</li>';
+                $html .= '</ol>';
+                $html .= '<p><a href="' . esc_attr(admin_url('edit.php?post_type=' . $post->post_type)) . '" class="button button-primary">' . __('Back to Post List', 'cus-scheduleupdate-td') . '</a></p>';
                 wp_die($html); // WPCS: XSS okay.
             }
         }
@@ -682,9 +703,16 @@ class ContentUpdateScheduler
                 wp_die(__('You do not have permission to publish content.', 'cus-scheduleupdate-td'));
             }
             
-            self::publish_post($post->ID);
+            $result = self::publish_post($post->ID);
+            if (is_wp_error($result)) {
+                $html  = '<h1>' . __('Publishing Failed', 'cus-scheduleupdate-td') . '</h1>';
+                $html .= '<p>' . sprintf(__('Failed to publish scheduled update for <strong>%s</strong>', 'cus-scheduleupdate-td'), htmlspecialchars($post->post_title)) . '</p>';
+                $html .= '<p><strong>' . __('Error:', 'cus-scheduleupdate-td') . '</strong> ' . esc_html($result->get_error_message()) . '</p>';
+                $html .= '<p>' . __('Please try again or contact your site administrator if this problem persists.', 'cus-scheduleupdate-td') . '</p>';
+                $html .= '<p><a href="' . esc_attr(admin_url('edit.php?post_type=' . $post->post_type)) . '" class="button button-primary">' . __('Back to Post List', 'cus-scheduleupdate-td') . '</a></p>';
+                wp_die($html);
+            }
             wp_redirect(admin_url('edit.php?post_type=' . $post->post_type));
-            exit;
             exit;
         }
     }
@@ -779,14 +807,29 @@ class ContentUpdateScheduler
             <p>
                 <?php esc_html_e('Please enter Time in the site\'s local timezone', 'cus-scheduleupdate-td'); ?>
             </p>
-            <p>
-                <div id="pastmsg" style="color:red; display:none;">
-                    <?php
-                    echo esc_html__('The release date is in the past.', 'cus-scheduleupdate-td');
-                    echo esc_html__(' This post will be published 5 minutes from now.', 'cus-scheduleupdate-td');
-                    ?>
-                </div>
+            <p class="description" style="margin-bottom: 1em;">
+                <strong><?php esc_html_e('Current server time:', 'cus-scheduleupdate-td'); ?></strong>
+                <span id="current-server-time"><?php echo esc_html(wp_date('F j, Y \a\t g:i A T')); ?></span>
+                <small style="display: block; margin-top: 0.25em; opacity: 0.7;">
+                    <?php esc_html_e('Times are in your site\'s configured timezone', 'cus-scheduleupdate-td'); ?>
+                </small>
             </p>
+            <div id="validation-messages">
+                <div id="pastmsg" class="notice notice-warning inline" style="display:none;">
+                    <p>
+                        <?php
+                        echo esc_html__('The release date is in the past.', 'cus-scheduleupdate-td');
+                        echo esc_html__(' This post will be published 5 minutes from now.', 'cus-scheduleupdate-td');
+                        ?>
+                    </p>
+                </div>
+                <div id="invalidmsg" class="notice notice-error inline" style="display:none;">
+                    <p><?php esc_html_e('Please enter a valid date and time.', 'cus-scheduleupdate-td'); ?></p>
+                </div>
+                <div id="successmsg" class="notice notice-success inline" style="display:none;">
+                    <p><?php esc_html_e('Valid scheduling date selected.', 'cus-scheduleupdate-td'); ?></p>
+                </div>
+            </div>
             <div class="misc-pub-section">
                 <label>
                     <input type="checkbox" 
@@ -804,24 +847,106 @@ class ContentUpdateScheduler
         function initContentUpdateScheduler() {
             jQuery(document).ready(function($) {
                 function checkDate() {
+                    // Hide all messages first
+                    $('#pastmsg, #invalidmsg, #successmsg').hide();
+                    
                     var month = $('#<?php echo esc_js($metaname); ?>_month').val();
                     var day = $('#<?php echo esc_js($metaname); ?>_day').val();
                     var year = $('#<?php echo esc_js($metaname); ?>_year').val();
                     var time = $('#<?php echo esc_js($metaname); ?>_time').val();
                     
-                    var selectedDate = new Date(year, month - 1, day, ...time.split(':'));
+                    // Validate inputs
+                    if (!month || !day || !year || !time) {
+                        $('#invalidmsg').show();
+                        return false;
+                    }
+                    
+                    // Validate ranges
+                    var monthInt = parseInt(month);
+                    var dayInt = parseInt(day);
+                    var yearInt = parseInt(year);
+                    var currentYear = new Date().getFullYear();
+                    
+                    if (monthInt < 1 || monthInt > 12) {
+                        $('#invalidmsg').show();
+                        return false;
+                    }
+                    
+                    if (dayInt < 1 || dayInt > 31) {
+                        $('#invalidmsg').show();
+                        return false;
+                    }
+                    
+                    if (yearInt < currentYear || yearInt > (currentYear + 10)) {
+                        $('#invalidmsg').show();
+                        return false;
+                    }
+                    
+                    // Check if it's a valid date (catches Feb 30, etc.)
+                    var testDate = new Date(yearInt, monthInt - 1, dayInt);
+                    if (testDate.getMonth() !== (monthInt - 1) || 
+                        testDate.getDate() !== dayInt || 
+                        testDate.getFullYear() !== yearInt) {
+                        $('#invalidmsg').show();
+                        return false;
+                    }
+                    
+                    // Create the full datetime
+                    var timeParts = time.split(':');
+                    if (timeParts.length !== 2) {
+                        $('#invalidmsg').show();
+                        return false;
+                    }
+                    
+                    var selectedDate = new Date(yearInt, monthInt - 1, dayInt, parseInt(timeParts[0]), parseInt(timeParts[1]));
                     var now = new Date();
+                    
+                    if (isNaN(selectedDate.getTime())) {
+                        $('#invalidmsg').show();
+                        return false;
+                    }
                     
                     if (selectedDate <= now) {
                         $('#pastmsg').show();
+                        return false;
                     } else {
-                        $('#pastmsg').hide();
+                        $('#successmsg').show();
+                        return true;
                     }
                 }
 
                 $('#<?php echo esc_js($metaname); ?>_month, #<?php echo esc_js($metaname); ?>_day, #<?php echo esc_js($metaname); ?>_year, #<?php echo esc_js($metaname); ?>_time').on('change', checkDate);
                 
                 checkDate(); // Initial check
+
+                // Update current time display every minute
+                function updateCurrentTime() {
+                    var now = new Date();
+                    var options = { 
+                        year: 'numeric', 
+                        month: 'long', 
+                        day: 'numeric', 
+                        hour: 'numeric', 
+                        minute: '2-digit',
+                        timeZoneName: 'short'
+                    };
+                    $('#current-server-time').text(now.toLocaleDateString('en-US', options));
+                }
+                
+                // Update immediately and then every minute
+                updateCurrentTime();
+                setInterval(updateCurrentTime, 60000);
+
+                // Prevent form submission if date validation fails
+                $('form#post').on('submit', function(e) {
+                    if (!checkDate()) {
+                        e.preventDefault();
+                        $('html, body').animate({
+                            scrollTop: $('#validation-messages').offset().top - 100
+                        }, 500);
+                        return false;
+                    }
+                });
             });
         }
 
@@ -1009,13 +1134,6 @@ class ContentUpdateScheduler
                 } else {
                     self::copy_simple_product($post->ID, $new_post_id);
                 }
-                // Update stock status and quantity if they exist
-                if ($original_stock_status !== '') {
-                    update_post_meta($post_id, '_stock_status', $original_stock_status);
-                }
-                if ($original_stock_quantity !== '') {
-                    update_post_meta($post_id, '_stock', $original_stock_quantity);
-                }
             }
         }
 
@@ -1154,24 +1272,19 @@ class ContentUpdateScheduler
      */
     public static function save_meta($post_id, $post)
     {
-        error_log("save_meta called for post ID: " . $post_id);
         
         if ($post->post_status === self::$_cus_publish_status || get_post_meta($post_id, self::$_cus_publish_status . '_original', true)) {
             $nonce = ContentUpdateScheduler::$_cus_publish_status . '_nonce';
             $pub = ContentUpdateScheduler::$_cus_publish_status . '_pubdate';
 
-            error_log("Nonce: " . (isset($_POST[$nonce]) ? 'set' : 'not set'));
             
             if (!isset($_POST[$nonce]) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[$nonce])), basename(__FILE__))) {
-                error_log("Nonce verification failed");
                 return $post_id;
             }
             if (!current_user_can(get_post_type_object($post->post_type)->cap->edit_post, $post_id)) {
-                error_log("User doesn't have permission to edit this post");
                 return $post_id;
             }
 
-            error_log("POST data: " . print_r($_POST, true));
 
             if (isset($_POST[$pub . '_month'], $_POST[$pub . '_day'], $_POST[$pub . '_year'], $_POST[$pub . '_time'])) {
                 $month = intval($_POST[$pub . '_month']);
@@ -1179,7 +1292,6 @@ class ContentUpdateScheduler
                 $year = intval($_POST[$pub . '_year']);
                 $time = sanitize_text_field($_POST[$pub . '_time']);
 
-                error_log("Date components: Year: $year, Month: $month, Day: $day, Time: $time");
 
                 // Get WordPress timezone
                 $tz = wp_timezone();
@@ -1189,7 +1301,6 @@ class ContentUpdateScheduler
                 $date_time = DateTime::createFromFormat('Y-m-d H:i', $date_string, $tz);
 
                 if ($date_time === false) {
-                    error_log("Invalid date format: $date_string");
                     return $post_id;
                 }
 
@@ -1197,24 +1308,17 @@ class ContentUpdateScheduler
                 $date_time->setTimezone(new DateTimeZone('UTC'));
                 $stamp = $date_time->getTimestamp();
 
-                error_log("Calculated timestamp: $stamp");
 
                 $current_time = new DateTime('now', $tz);
                 if ($date_time <= $current_time) {
                     $date_time = clone $current_time;
                     $date_time->modify('+5 minutes');
                     $stamp = $date_time->getTimestamp();
-                    error_log("Timestamp was in the past, set to 5 minutes from now: $stamp");
                 }
 
                 wp_clear_scheduled_hook('cus_publish_post', array($post_id));
                 update_post_meta($post_id, $pub, $stamp);
                 $scheduled = wp_schedule_single_event($stamp, 'cus_publish_post', array($post_id));
-                if ($scheduled === false) {
-                    error_log("Failed to schedule event for timestamp: $stamp");
-                } else {
-                    error_log("Successfully scheduled event for timestamp: $stamp");
-                }
                 
                 // Save keep_dates preference
                 $keep_dates_key = self::$_cus_publish_status . '_keep_dates';
@@ -1226,37 +1330,27 @@ class ContentUpdateScheduler
 
                 // Verify the event was scheduled
                 $next_scheduled = wp_next_scheduled('cus_publish_post', array($post_id));
-                if ($next_scheduled === false) {
-                    error_log("Event not found in the schedule after attempting to add it.");
-                } else {
-                    error_log("Next scheduled time for this event: " . date('Y-m-d H:i:s', $next_scheduled));
-                }
 
                 // Check all scheduled events
                 self::check_scheduled_events();
             } else {
-                error_log("Date/time POST variables not set");
             }
 
             // Check if the post being saved is a republication draft
             $original_post_id = get_post_meta($post_id, self::$_cus_publish_status . '_original', true);
             if ($original_post_id) {
-                error_log("Handling republication draft. Original post ID: $original_post_id");
                 // Ensure the original post's stock status and quantity are maintained
-                $original_stock_status = get_post_meta($original_post_id, '_stock_status', true);
-                $original_stock_quantity = get_post_meta($original_post_id, '_stock', true);
+                $original_stock_status = get_post_meta($original_post_id, self::META_STOCK_STATUS, true);
+                $original_stock_quantity = get_post_meta($original_post_id, self::META_STOCK_QUANTITY, true);
 
                 if ($original_stock_status !== '') {
-                    update_post_meta($post_id, '_stock_status', $original_stock_status);
-                    error_log("Updated stock status: $original_stock_status");
+                    update_post_meta($post_id, self::META_STOCK_STATUS, $original_stock_status);
                 }
                 if ($original_stock_quantity !== '') {
-                    update_post_meta($post_id, '_stock', $original_stock_quantity);
-                    error_log("Updated stock quantity: $original_stock_quantity");
+                    update_post_meta($post_id, self::META_STOCK_QUANTITY, $original_stock_quantity);
                 }
             }
         } else {
-            error_log("Post status is not cus_sc_publish and no original post found");
         }
     }
 
@@ -1273,14 +1367,12 @@ class ContentUpdateScheduler
      */
     public static function publish_post($post_id)
     {
-        error_log("publish_post called for post ID: " . $post_id);
 
         // Implement locking mechanism
         $lock_key = 'cus_publish_lock_' . $post_id;
         if (!get_transient($lock_key)) {
             set_transient($lock_key, true, 300); // Lock for 5 minutes
         } else {
-            error_log("Publish process already running for post ID: " . $post_id);
             return new WP_Error('locked', 'Publish process already running for this post');
         }
 
@@ -1289,30 +1381,26 @@ class ContentUpdateScheduler
 
             // break early if given post is not an actual scheduled post created by this plugin.
             if (!$orig_id) {
-                error_log("No original post found for post ID: " . $post_id);
                 return new WP_Error('no_original', 'No original post found');
             }
 
             $orig = get_post($orig_id);
             if (!$orig) {
-                error_log("Original post not found for ID: " . $orig_id);
                 return new WP_Error('original_not_found', 'Original post not found');
             }
 
             $post = get_post($post_id);
             if (!$post) {
-                error_log("Scheduled post not found for ID: " . $post_id);
                 return new WP_Error('scheduled_not_found', 'Scheduled post not found');
             }
 
             // Ensure the post is not in the trash before proceeding
             if ($post->post_status === 'trash') {
-                error_log("Post is in trash, aborting publish process for post ID: " . $post_id);
                 return new WP_Error('post_trashed', 'Post is in trash');
             }
 
-            $original_stock_status = get_post_meta($orig->ID, '_stock_status', true);
-            $original_stock_quantity = get_post_meta($orig->ID, '_stock', true);
+            $original_stock_status = get_post_meta($orig->ID, self::META_STOCK_STATUS, true);
+            $original_stock_quantity = get_post_meta($orig->ID, self::META_STOCK_QUANTITY, true);
 
             self::copy_elementor_data($post->ID, $orig_id);
             self::copy_oxygen_data($post->ID, $orig_id);
@@ -1371,31 +1459,27 @@ class ContentUpdateScheduler
 
             $result = wp_update_post($post, true);
             if (is_wp_error($result)) {
-                error_log("Error updating post: " . $result->get_error_message());
                 $wpdb->query('ROLLBACK');
                 return $result;
             }
 
             if ($original_stock_status !== '') {
-                update_post_meta($post->ID, '_stock_status', $original_stock_status);
+                update_post_meta($post->ID, self::META_STOCK_STATUS, $original_stock_status);
             }
             if ($original_stock_quantity !== '') {
-                update_post_meta($post->ID, '_stock', $original_stock_quantity);
+                update_post_meta($post->ID, self::META_STOCK_QUANTITY, $original_stock_quantity);
             }
 
             $delete_result = wp_delete_post($post_id, true);
             if (is_wp_error($delete_result)) {
-                error_log("Error deleting scheduled post: " . $delete_result->get_error_message());
                 $wpdb->query('ROLLBACK');
                 return $delete_result;
             }
 
             $wpdb->query('COMMIT');
 
-            error_log("Successfully published post. Original ID: " . $orig->ID);
             return $orig->ID;
         } catch (Exception $e) {
-            error_log("Exception occurred during publish process: " . $e->getMessage());
             $wpdb->query('ROLLBACK');
             return new WP_Error('publish_exception', $e->getMessage());
         } finally {
@@ -1413,16 +1497,13 @@ class ContentUpdateScheduler
      */
     public static function cron_publish_post($ID)
     {
-        error_log("cron_publish_post called for post ID: " . $ID);
         kses_remove_filters();
         $result = self::publish_post($ID);
         kses_init_filters();
         
         if (is_wp_error($result)) {
-            error_log("Error in cron_publish_post for post ID: " . $ID . ". Error: " . $result->get_error_message());
             // Here you might want to add some error handling, such as notifying an admin or rescheduling the event
         } else {
-            error_log("cron_publish_post completed successfully for post ID: " . $ID . ". Result: " . print_r($result, true));
         }
     }
 
@@ -1538,24 +1619,20 @@ class ContentUpdateScheduler
     }
 
     public static function check_scheduled_events() {
-        error_log("Checking scheduled events");
         $cron = _get_cron_array();
         $found = false;
         foreach ($cron as $timestamp => $cronhooks) {
             if (isset($cronhooks['cus_publish_post'])) {
                 foreach ($cronhooks['cus_publish_post'] as $hash => $event) {
                     $found = true;
-                    error_log("Found scheduled cus_publish_post event: " . date('Y-m-d H:i:s', $timestamp) . " for post ID: " . $event['args'][0]);
                 }
             }
         }
         if (!$found) {
-            error_log("No scheduled cus_publish_post events found");
         }
     }
 
     public static function check_and_publish_overdue_posts() {
-        error_log("Checking for overdue posts to publish");
         global $wpdb;
 
         // Get the WordPress timezone setting
@@ -1563,7 +1640,6 @@ class ContentUpdateScheduler
         $current_time = new DateTime('now', $wp_timezone);
         $current_timestamp = $current_time->getTimestamp();
 
-        error_log("Current time in WordPress timezone: " . $current_time->format('Y-m-d H:i:s'));
 
         $overdue_posts = $wpdb->get_results(
             $wpdb->prepare(
@@ -1575,10 +1651,8 @@ class ContentUpdateScheduler
 
         foreach ($overdue_posts as $post) {
             $scheduled_time = new DateTime('@' . $post->meta_value, $wp_timezone);
-            error_log("Post ID: " . $post->post_id . " scheduled for: " . $scheduled_time->format('Y-m-d H:i:s'));
 
             if ($scheduled_time <= $current_time) {
-                error_log("Publishing overdue post ID: " . $post->post_id);
                 self::cron_publish_post($post->post_id);
             }
         }
@@ -1755,11 +1829,11 @@ class ContentUpdateScheduler
      */
     public static function handle_homepage_scheduling() {
         if (!current_user_can('manage_options')) {
-            wp_die(json_encode(array('success' => false, 'data' => 'Insufficient permissions')));
+            wp_send_json_error('Insufficient permissions');
         }
 
         if (!wp_verify_nonce($_POST['homepage_nonce'], 'schedule_homepage_change')) {
-            wp_die(json_encode(array('success' => false, 'data' => 'Invalid nonce')));
+            wp_send_json_error('Invalid nonce');
         }
 
         $page_id = intval($_POST['page_id']);
@@ -1767,7 +1841,7 @@ class ContentUpdateScheduler
         $schedule_time = sanitize_text_field($_POST['schedule_time']);
 
         if (empty($page_id) || empty($schedule_date) || empty($schedule_time)) {
-            wp_die(json_encode(array('success' => false, 'data' => 'Missing required fields')));
+            wp_send_json_error('Missing required fields');
         }
 
         // Convert to timestamp using WordPress timezone
@@ -1776,7 +1850,7 @@ class ContentUpdateScheduler
         $date_time = DateTime::createFromFormat('Y-m-d H:i', $date_string, $tz);
 
         if ($date_time === false) {
-            wp_die(json_encode(array('success' => false, 'data' => 'Invalid date format')));
+            wp_send_json_error('Invalid date format');
         }
 
         // Convert to UTC for scheduling
@@ -1787,7 +1861,7 @@ class ContentUpdateScheduler
         $scheduled = wp_schedule_single_event($timestamp, 'cus_change_homepage', array($page_id));
         
         if ($scheduled === false) {
-            wp_die(json_encode(array('success' => false, 'data' => 'Failed to schedule homepage change')));
+            wp_send_json_error('Failed to schedule homepage change');
         }
 
         // Store the scheduled change in options for display
@@ -1799,7 +1873,7 @@ class ContentUpdateScheduler
         );
         update_option('cus_scheduled_homepage_changes', $scheduled_changes);
 
-        wp_die(json_encode(array('success' => true, 'data' => 'Homepage change scheduled successfully')));
+        wp_send_json_success('Homepage change scheduled successfully');
     }
 
     /**
@@ -1807,11 +1881,11 @@ class ContentUpdateScheduler
      */
     public static function handle_cancel_homepage_change() {
         if (!current_user_can('manage_options')) {
-            wp_die(json_encode(array('success' => false, 'data' => 'Insufficient permissions')));
+            wp_send_json_error('Insufficient permissions');
         }
 
         if (!wp_verify_nonce($_POST['homepage_nonce'], 'schedule_homepage_change')) {
-            wp_die(json_encode(array('success' => false, 'data' => 'Invalid nonce')));
+            wp_send_json_error('Invalid nonce');
         }
 
         $timestamp = intval($_POST['timestamp']);
@@ -1827,7 +1901,7 @@ class ContentUpdateScheduler
         });
         update_option('cus_scheduled_homepage_changes', $scheduled_changes);
 
-        wp_die(json_encode(array('success' => true, 'data' => 'Homepage change canceled successfully')));
+        wp_send_json_success('Homepage change canceled successfully');
     }
 
     /**
@@ -1852,12 +1926,10 @@ class ContentUpdateScheduler
      * Cron job to change homepage
      */
     public static function cron_change_homepage($page_id) {
-        error_log("Changing homepage to page ID: " . $page_id);
         
         // Verify the page exists and is published
         $page = get_post($page_id);
         if (!$page || $page->post_status !== 'publish') {
-            error_log("Cannot change homepage: Page $page_id is not published");
             return;
         }
 
@@ -1872,7 +1944,6 @@ class ContentUpdateScheduler
         });
         update_option('cus_scheduled_homepage_changes', $scheduled_changes);
         
-        error_log("Homepage successfully changed to: " . $page->post_title);
     }
 }
 
