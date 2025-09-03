@@ -1438,7 +1438,7 @@ class ContentUpdateScheduler
     public static function get_pubdate($stamp)
     {
         $date = new DateTime('@' . $stamp);
-        $date->setTimezone(self::get_timezone_object());
+        $date->setTimezone(wp_timezone());
         return $date->format(get_option('date_format') . ' ' . get_option('time_format'));
     }
 
