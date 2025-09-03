@@ -16,6 +16,11 @@
 
 
 /**
+ * Load options file early to prevent race conditions
+ */
+require_once dirname( __FILE__ ) . '/options.php';
+
+/**
  * Content Update Scheduler main class
  */
 class ContentUpdateScheduler
@@ -386,8 +391,7 @@ class ContentUpdateScheduler
      */
     public static function init()
     {
-        require_once dirname(__FILE__) . '/options.php';
-
+        
         self::load_plugin_textdomain();
         self::$cus_publish_label   = __('Scheduled Content Update', 'cus-scheduleupdate-td');
         self::$_cus_publish_metabox = __('Scheduled Content Update', 'cus-scheduleupdate-td');
