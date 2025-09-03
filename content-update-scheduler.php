@@ -322,6 +322,22 @@ class ContentUpdateScheduler
         ));
 
         foreach ($variations as $variation) {
+            // Protect Unicode escape sequences in variation content
+            $protected_var_content = $variation->post_content;
+            $protected_var_excerpt = $variation->post_excerpt;
+            
+            if (strpos($protected_var_content, '\\u') !== false) {
+                $protected_var_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                    return '___UNICODE_' . $matches[1] . '___';
+                }, $protected_var_content);
+            }
+            
+            if (strpos($protected_var_excerpt, '\\u') !== false) {
+                $protected_var_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                    return '___UNICODE_' . $matches[1] . '___';
+                }, $protected_var_excerpt);
+            }
+
             $new_variation = array(
                 'post_title'   => $variation->post_title,
                 'post_name'    => $variation->post_name,
@@ -329,11 +345,43 @@ class ContentUpdateScheduler
                 'post_parent'  => $destination_product_id,
                 'post_type'    => 'product_variation',
                 'menu_order'   => $variation->menu_order,
-                'post_excerpt' => $variation->post_excerpt,
-                'post_content' => $variation->post_content,
+                'post_excerpt' => $protected_var_excerpt,
+                'post_content' => $protected_var_content,
             );
 
             $new_variation_id = wp_insert_post($new_variation);
+            
+            // Restore Unicode escapes in variation if needed
+            if (($protected_var_content !== $variation->post_content || $protected_var_excerpt !== $variation->post_excerpt) 
+                && !is_wp_error($new_variation_id)) {
+                $update_data = array();
+                
+                if ($protected_var_content !== $variation->post_content) {
+                    $restored_content = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function($matches) {
+                        return '\\u' . $matches[1];
+                    }, $protected_var_content);
+                    $update_data['post_content'] = $restored_content;
+                }
+                
+                if ($protected_var_excerpt !== $variation->post_excerpt) {
+                    $restored_excerpt = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function($matches) {
+                        return '\\u' . $matches[1];
+                    }, $protected_var_excerpt);
+                    $update_data['post_excerpt'] = $restored_excerpt;
+                }
+                
+                if (!empty($update_data)) {
+                    global $wpdb;
+                    $wpdb->update(
+                        $wpdb->posts,
+                        $update_data,
+                        array('ID' => $new_variation_id),
+                        array_fill(0, count($update_data), '%s'),
+                        array('%d')
+                    );
+                    clean_post_cache($new_variation_id);
+                }
+            }
 
             // Copy variation meta data
             $meta_data = get_post_meta($variation->ID);
@@ -1071,8 +1119,55 @@ class ContentUpdateScheduler
         if ($old_status === self::$_cus_publish_status && 'trash' !== $new_status) {
             remove_action('save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10);
 
+            // Protect Unicode escape sequences during status change
+            $content_needs_protection = strpos($post->post_content, '\\u') !== false;
+            $excerpt_needs_protection = strpos($post->post_excerpt, '\\u') !== false;
+            
+            if ($content_needs_protection) {
+                $post->post_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                    return '___UNICODE_' . $matches[1] . '___';
+                }, $post->post_content);
+            }
+            
+            if ($excerpt_needs_protection) {
+                $post->post_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                    return '___UNICODE_' . $matches[1] . '___';
+                }, $post->post_excerpt);
+            }
+
             $post->post_status = self::$_cus_publish_status;
-            wp_update_post($post, true);
+            $result = wp_update_post($post, true);
+            
+            // Restore Unicode escapes if they were protected
+            if (!is_wp_error($result) && ($content_needs_protection || $excerpt_needs_protection)) {
+                $update_data = array();
+                
+                if ($content_needs_protection) {
+                    $restored_content = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function($matches) {
+                        return '\\u' . $matches[1];
+                    }, $post->post_content);
+                    $update_data['post_content'] = $restored_content;
+                }
+                
+                if ($excerpt_needs_protection) {
+                    $restored_excerpt = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function($matches) {
+                        return '\\u' . $matches[1];
+                    }, $post->post_excerpt);
+                    $update_data['post_excerpt'] = $restored_excerpt;
+                }
+                
+                if (!empty($update_data)) {
+                    global $wpdb;
+                    $wpdb->update(
+                        $wpdb->posts,
+                        $update_data,
+                        array('ID' => $result),
+                        array_fill(0, count($update_data), '%s'),
+                        array('%d')
+                    );
+                    clean_post_cache($result);
+                }
+            }
 
             add_action('save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2);
         } elseif ('trash' === $new_status) {
@@ -1102,14 +1197,30 @@ class ContentUpdateScheduler
         
         $new_author = get_user_by('id', $post->post_author);
 
+        // Protect Unicode escape sequences in content and excerpt before copying
+        $protected_content = $post->post_content;
+        $protected_excerpt = $post->post_excerpt;
+        
+        if (strpos($protected_content, '\\u') !== false) {
+            $protected_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                return '___UNICODE_' . $matches[1] . '___';
+            }, $protected_content);
+        }
+        
+        if (strpos($protected_excerpt, '\\u') !== false) {
+            $protected_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                return '___UNICODE_' . $matches[1] . '___';
+            }, $protected_excerpt);
+        }
+
         // create the new post.
         $new_post = array(
             'menu_order'     => $post->menu_order,
             'comment_status' => $post->comment_status,
             'ping_status'    => $post->ping_status,
             'post_author'    => $new_author->ID,
-            'post_content'   => $post->post_content,
-            'post_excerpt'   => $post->post_excerpt,
+            'post_content'   => $protected_content,
+            'post_excerpt'   => $protected_excerpt,
             'post_mime_type' => $post->mime_type,
             'post_parent'    => $post->ID,
             'post_password'  => $post->post_password,
@@ -1122,6 +1233,41 @@ class ContentUpdateScheduler
         $new_post_id = wp_insert_post($new_post, true);
         if (is_wp_error($new_post_id)) {
             return $new_post_id;
+        }
+
+        // Restore Unicode escape sequences if they were protected
+        $need_content_restore = strpos($protected_content, '___UNICODE_') !== false;
+        $need_excerpt_restore = strpos($protected_excerpt, '___UNICODE_') !== false;
+        
+        if ($need_content_restore || $need_excerpt_restore) {
+            $update_data = array();
+            
+            if ($need_content_restore) {
+                $restored_content = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function($matches) {
+                    return '\\u' . $matches[1];
+                }, $protected_content);
+                $update_data['post_content'] = $restored_content;
+            }
+            
+            if ($need_excerpt_restore) {
+                $restored_excerpt = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function($matches) {
+                    return '\\u' . $matches[1];
+                }, $protected_excerpt);
+                $update_data['post_excerpt'] = $restored_excerpt;
+            }
+            
+            // Update content/excerpt directly to bypass filters that might corrupt it
+            global $wpdb;
+            $wpdb->update(
+                $wpdb->posts,
+                $update_data,
+                array('ID' => $new_post_id),
+                array_fill(0, count($update_data), '%s'),
+                array('%d')
+            );
+            
+            // Clear any caches
+            clean_post_cache($new_post_id);
         }
 
         self::copy_elementor_data($post->ID, $new_post_id);
@@ -1464,7 +1610,61 @@ class ContentUpdateScheduler
 
             delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
 
+            // Prevent Unicode escape sequence corruption in content and excerpt
+            // WordPress may apply stripslashes() which corrupts \u003c to u003c
+            $content_has_unicode = strpos($post->post_content, '\\u') !== false;
+            $excerpt_has_unicode = strpos($post->post_excerpt, '\\u') !== false;
+            
+            if ($content_has_unicode) {
+                $post->post_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                    return '___UNICODE_' . $matches[1] . '___';
+                }, $post->post_content);
+            }
+            
+            if ($excerpt_has_unicode) {
+                $post->post_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                    return '___UNICODE_' . $matches[1] . '___';
+                }, $post->post_excerpt);
+            }
+            
             $result = wp_update_post($post, true);
+            
+            // Restore Unicode escapes if they were protected
+            if (!is_wp_error($result) && ($content_has_unicode || $excerpt_has_unicode)) {
+                $updated_post = get_post($result);
+                if ($updated_post) {
+                    $update_data = array();
+                    
+                    if ($content_has_unicode && strpos($updated_post->post_content, '___UNICODE_') !== false) {
+                        $restored_content = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function($matches) {
+                            return '\\u' . $matches[1];
+                        }, $updated_post->post_content);
+                        $update_data['post_content'] = $restored_content;
+                    }
+                    
+                    if ($excerpt_has_unicode && strpos($updated_post->post_excerpt, '___UNICODE_') !== false) {
+                        $restored_excerpt = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function($matches) {
+                            return '\\u' . $matches[1];
+                        }, $updated_post->post_excerpt);
+                        $update_data['post_excerpt'] = $restored_excerpt;
+                    }
+                    
+                    if (!empty($update_data)) {
+                        // Update with restored content/excerpt, bypassing filters that might corrupt it
+                        global $wpdb;
+                        $wpdb->update(
+                            $wpdb->posts,
+                            $update_data,
+                            array('ID' => $result),
+                            array_fill(0, count($update_data), '%s'),
+                            array('%d')
+                        );
+                        
+                        // Clear any caches
+                        clean_post_cache($result);
+                    }
+                }
+            }
             if (is_wp_error($result)) {
                 $wpdb->query('ROLLBACK');
                 return $result;
