@@ -1051,12 +1051,20 @@ class ContentUpdateScheduler
             return $unserialized;
         }
 
-        // Check if value is JSON encoded (Elementor uses this)
-        if (is_string($value) && substr($value, 0, 1) === '{' && substr($value, -1) === '}') {
-            $json_decoded = json_decode($value, true);
-            if (json_last_error() === JSON_ERROR_NONE) {
-                // If it's valid JSON, store the raw value to preserve Unicode escapes
-                return $value;
+        // Only treat as JSON if it's actually structured JSON data, not just any string with braces
+        if (is_string($value) && strlen($value) > 2) {
+            // Must start and end with proper JSON delimiters
+            if ((substr($value, 0, 1) === '{' && substr($value, -1) === '}') ||
+                (substr($value, 0, 1) === '[' && substr($value, -1) === ']')) {
+                
+                $json_decoded = json_decode($value, true);
+                if (json_last_error() === JSON_ERROR_NONE) {
+                    // Additional validation: must decode to array or object (not string/number)
+                    // This prevents treating HTML/CSS with braces as JSON
+                    if (is_array($json_decoded) || is_object($json_decoded)) {
+                        return $value;
+                    }
+                }
             }
         }
 
