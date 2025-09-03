@@ -444,6 +444,9 @@ class ContentUpdateScheduler
         if (!wp_next_scheduled('cus_check_overdue_posts')) {
             wp_schedule_event(time(), 'five_minutes', 'cus_check_overdue_posts');
         }
+
+        // Add scheduled republications status page
+        add_action('admin_menu', array(__CLASS__, 'add_republications_status_page'));
     }
 
     /**
@@ -1304,17 +1307,16 @@ class ContentUpdateScheduler
                     return $post_id;
                 }
 
-                // Convert to UTC before getting timestamp
-                $date_time->setTimezone(new DateTimeZone('UTC'));
-                $stamp = $date_time->getTimestamp();
-
-
+                // Check if the date is in the past BEFORE converting to UTC
                 $current_time = new DateTime('now', $tz);
                 if ($date_time <= $current_time) {
                     $date_time = clone $current_time;
                     $date_time->modify('+5 minutes');
-                    $stamp = $date_time->getTimestamp();
                 }
+
+                // Now convert to UTC for timestamp storage
+                $date_time->setTimezone(new DateTimeZone('UTC'));
+                $stamp = $date_time->getTimestamp();
 
                 wp_clear_scheduled_hook('cus_publish_post', array($post_id));
                 update_post_meta($post_id, $pub, $stamp);
@@ -1478,9 +1480,14 @@ class ContentUpdateScheduler
 
             $wpdb->query('COMMIT');
 
+            // Clear the cron event after successful publishing
+            wp_clear_scheduled_hook('cus_publish_post', array($post_id));
+
             return $orig->ID;
         } catch (Exception $e) {
             $wpdb->query('ROLLBACK');
+            // Clear cron event on error to prevent retry loops
+            wp_clear_scheduled_hook('cus_publish_post', array($post_id));
             return new WP_Error('publish_exception', $e->getMessage());
         } finally {
             delete_transient($lock_key);
@@ -1643,18 +1650,21 @@ class ContentUpdateScheduler
 
         $overdue_posts = $wpdb->get_results(
             $wpdb->prepare(
-                "SELECT post_id, meta_value FROM {$wpdb->postmeta} 
-                WHERE meta_key = %s",
-                self::$_cus_publish_status . '_pubdate'
+                "SELECT pm.post_id, pm.meta_value 
+                FROM {$wpdb->postmeta} pm 
+                INNER JOIN {$wpdb->posts} p ON pm.post_id = p.ID 
+                WHERE pm.meta_key = %s 
+                AND p.post_status = %s 
+                AND pm.meta_value <= %d",
+                self::$_cus_publish_status . '_pubdate',
+                self::$_cus_publish_status,
+                $current_timestamp
             )
         );
 
         foreach ($overdue_posts as $post) {
-            $scheduled_time = new DateTime('@' . $post->meta_value, $wp_timezone);
-
-            if ($scheduled_time <= $current_time) {
-                self::cron_publish_post($post->post_id);
-            }
+            // Post is already confirmed overdue by the query
+            self::cron_publish_post($post->post_id);
         }
     }
 
@@ -1945,7 +1955,106 @@ class ContentUpdateScheduler
         update_option('cus_scheduled_homepage_changes', $scheduled_changes);
         
     }
+
+    /**
+     * Add scheduled republications status page
+     */
+    public static function add_republications_status_page() {
+        add_submenu_page(
+            'tools.php',
+            __('Scheduled Republications', 'cus-scheduleupdate-td'),
+            __('Scheduled Republications', 'cus-scheduleupdate-td'),
+            'manage_options',
+            'scheduled-republications',
+            array(__CLASS__, 'republications_status_page')
+        );
+    }
+
+    /**
+     * Render scheduled republications status page
+     */
+    public static function republications_status_page() {
+        if (!current_user_can('manage_options')) {
+            return;
+        }
+
+        // Get scheduled republications
+        global $wpdb;
+        $scheduled_posts = $wpdb->get_results(
+            $wpdb->prepare(
+                "SELECT p.ID, p.post_title, pm.meta_value as schedule_timestamp 
+                FROM {$wpdb->posts} p 
+                INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id 
+                WHERE p.post_status = %s 
+                AND pm.meta_key = %s 
+                ORDER BY pm.meta_value ASC",
+                self::$_cus_publish_status,
+                self::$_cus_publish_status . '_pubdate'
+            )
+        );
+
+        ?>
+        <div class="wrap">
+            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+            <p><?php esc_html_e('This page shows all currently scheduled republications.', 'cus-scheduleupdate-td'); ?></p>
+
+            <table class="wp-list-table widefat fixed striped">
+                <thead>
+                    <tr>
+                        <th><?php esc_html_e('Original Post', 'cus-scheduleupdate-td'); ?></th>
+                        <th><?php esc_html_e('Scheduled Date', 'cus-scheduleupdate-td'); ?></th>
+                        <th><?php esc_html_e('Status', 'cus-scheduleupdate-td'); ?></th>
+                        <th><?php esc_html_e('Actions', 'cus-scheduleupdate-td'); ?></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (!empty($scheduled_posts)): ?>
+                        <?php foreach ($scheduled_posts as $post): ?>
+                            <tr>
+                                <td>
+                                    <?php 
+                                    $original_id = get_post_meta($post->ID, self::$_cus_publish_status . '_original', true);
+                                    if ($original_id) {
+                                        echo '<strong>' . esc_html(get_the_title($original_id)) . '</strong>';
+                                        echo '<br><small>' . esc_html(get_the_title($post->ID)) . ' (' . esc_html__('Update', 'cus-scheduleupdate-td') . ')</small>';
+                                    } else {
+                                        echo '<strong>' . esc_html($post->post_title) . '</strong>';
+                                    }
+                                    ?>
+                                </td>
+                                <td><?php echo esc_html(self::get_pubdate($post->schedule_timestamp)); ?></td>
+                                <td>
+                                    <?php 
+                                    $wp_timezone = wp_timezone();
+                                    $scheduled_time = DateTime::createFromFormat('U', $post->schedule_timestamp);
+                                    $scheduled_time->setTimezone($wp_timezone);
+                                    $current_time = new DateTime('now', $wp_timezone);
+                                    
+                                    if ($scheduled_time <= $current_time) {
+                                        echo '<span style="color: #ffb900; font-weight: bold;">⚠ ' . esc_html__('Overdue', 'cus-scheduleupdate-td') . '</span>';
+                                    } else {
+                                        echo '<span style="color: #00a32a;">✓ ' . esc_html__('Scheduled', 'cus-scheduleupdate-td') . '</span>';
+                                    }
+                                    ?>
+                                </td>
+                                <td>
+                                    <a href="<?php echo esc_url(get_edit_post_link($post->ID)); ?>" class="button button-small"><?php esc_html_e('Edit Update', 'cus-scheduleupdate-td'); ?></a>
+                                    <a href="<?php echo esc_url(admin_url('admin.php?action=workflow_publish_now&post=' . $post->ID . '&n=' . wp_create_nonce('workflow_publish_now' . $post->ID))); ?>" class="button button-primary button-small"><?php esc_html_e('Publish Now', 'cus-scheduleupdate-td'); ?></a>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php else: ?>
+                        <tr>
+                            <td colspan="4"><?php esc_html_e('No scheduled republications found.', 'cus-scheduleupdate-td'); ?></td>
+                        </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php
+    }
 }
+
 
 add_action('save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2);
 add_action('cus_publish_post', array( 'ContentUpdateScheduler', 'cron_publish_post' ), 1);
