@@ -1877,7 +1877,7 @@ class ContentUpdateScheduler
 }
 
 add_action('save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10, 2);
-add_action('cus_publish_post', array( 'ContentUpdateScheduler', 'cron_publish_post' ), PHP_INT_MIN);
+add_action('cus_publish_post', array( 'ContentUpdateScheduler', 'cron_publish_post' ), 1);
 
 add_action('wp_ajax_load_pubdate', array( 'ContentUpdateScheduler', 'load_pubdate' ));
 add_action('init', array( 'ContentUpdateScheduler', 'init' ), PHP_INT_MAX);
