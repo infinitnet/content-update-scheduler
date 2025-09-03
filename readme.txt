@@ -2,8 +2,8 @@
 Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 5.0
-Tested up to: 6.8.2
-Stable tag: 3.0.0
+Tested up to: 6.8
+Stable tag: 3.0.1
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -61,6 +61,9 @@ add_filter('content_update_scheduler_excluded_post_types', function($excluded_po
 `
 
 == Changelog ==
+
+= 3.0.1 =
+* fix: Prevent Unicode escape sequence corruption in Gutenberg content
 
 = 3.0.0 =
 * feat: Add admin interface for monitoring scheduled republications under Tools menu
