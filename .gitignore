@@ -399,3 +399,4 @@ FodyWeavers.xsd
 .aider*
 .DS_Store
 .env
+.serena/
