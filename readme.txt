@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 5.0
 Tested up to: 6.8.2
-Stable tag: 2.4.0
+Stable tag: 3.0.0
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -62,8 +62,20 @@ add_filter('content_update_scheduler_excluded_post_types', function($excluded_po
 
 == Changelog ==
 
-= 2.4.0 =
+= 3.0.0 =
+* feat: Add admin interface for monitoring scheduled republications under Tools menu
+* feat: Add real-time status indicators and quick actions in admin interface
 * feat: Add static homepage scheduling functionality
+* feat: Add current server time display and live-updating clock to scheduling interface
+* feat: Implement JavaScript-based validation for date/time inputs
+* refactor: Remove all debug logging statements for production readiness
+* refactor: Replace generic error messages with specific, actionable feedback
+* refactor: Standardize AJAX error handling with proper wp_send_json functions
+* refactor: Add class constants for frequently used magic strings
+* fix: Resolve scheduled republication timing issues with timezone comparison logic
+* fix: Add cron event cleanup after successful publishing to prevent retry loops
+* fix: Improve overdue posts query with proper filtering and status checking
+* fix: Resolve WooCommerce stock status and quantity variable initialization bug
 * fix: Prevent content corruption in modern WordPress with Gutenberg
 * fix: Resolve missing 'Scheduled Content Update' link in post row actions
 * fix: Correct timezone display in republication date column

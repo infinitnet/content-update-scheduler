@@ -1,5 +1,4 @@
 <?php
-
 /**
  * Content Update Scheduler
  *
@@ -7,7 +6,7 @@
  * Description: Schedule content updates for any page or post type.
  * Author: Infinitnet
  * Author URI: https://infinitnet.io/
- * Version: 2.4.0
+ * Version: 3.0.0
  * License: GPLv3
  * Text Domain: content-update-scheduler
  *
@@ -372,7 +371,7 @@ class ContentUpdateScheduler
      * @access public
      * @var string
      */
-    public static $cus_publish_label         = 'Scheduled Content Update';
+    public static $cus_publish_label         = 'Content Update Scheduler';
 
     /**
      * Title for the Publish Metabox
@@ -380,7 +379,7 @@ class ContentUpdateScheduler
      * @access protected
      * @var string
      */
-    protected static $_cus_publish_metabox    = 'Scheduled Content Update';
+    protected static $_cus_publish_metabox    = 'Content Update Scheduler';
 
     /**
      * Status for wordpress posts
@@ -402,8 +401,8 @@ class ContentUpdateScheduler
     {
         
         self::load_plugin_textdomain();
-        self::$cus_publish_label   = __('Scheduled Content Update', 'cus-scheduleupdate-td');
-        self::$_cus_publish_metabox = __('Scheduled Content Update', 'cus-scheduleupdate-td');
+        self::$cus_publish_label   = __('Content Update Scheduler', 'cus-scheduleupdate-td');
+        self::$_cus_publish_metabox = __('Content Update Scheduler', 'cus-scheduleupdate-td');
         self::register_post_status();
 
         // Get all public post types plus 'product' (maintaining existing behavior)
@@ -445,8 +444,10 @@ class ContentUpdateScheduler
             wp_schedule_event(time(), 'five_minutes', 'cus_check_overdue_posts');
         }
 
-        // Add scheduled republications status page
-        add_action('admin_menu', array(__CLASS__, 'add_republications_status_page'));
+        // Add scheduled republications status page (admin only)
+        if (is_admin()) {
+            add_action('admin_menu', array(__CLASS__, 'add_republications_status_page'));
+        }
     }
 
     /**
@@ -514,7 +515,7 @@ class ContentUpdateScheduler
         $exclude_from_search = ! is_admin();
 
         $args = array(
-            'label'                     => _x('Scheduled Content Update', 'Status General Name', 'default'),
+            'label'                     => _x('Content Update Scheduler', 'Status General Name', 'default'),
             'public'                    => $public,
             'internal'                  => true,
             'publicly_queryable'        => true,
@@ -523,7 +524,7 @@ class ContentUpdateScheduler
             'show_in_admin_all_list'    => true,
             'show_in_admin_status_list' => true,
             // translators: number of posts.
-            'label_count'               => _n_noop('Scheduled Content Update <span class="count">(%s)</span>', 'Scheduled Content Update <span class="count">(%s)</span>', 'cus-scheduleupdate-td'),
+            'label_count'               => _n_noop('Content Update Scheduler <span class="count">(%s)</span>', 'Content Update Scheduler <span class="count">(%s)</span>', 'cus-scheduleupdate-td'),
         );
 
         register_post_status(self::$_cus_publish_status, $args);
@@ -741,8 +742,6 @@ class ContentUpdateScheduler
             echo '<style> #duplicate-action, #delete-action, #minor-publishing-actions, #misc-publishing-actions, #preview-action {display:none;} </style>'; // WPCS: XSS okay.
         });
 
-        wp_enqueue_script('jquery-ui-datepicker');
-        wp_enqueue_style('wp-jquery-ui-dialog');
         wp_enqueue_style('wp-admin');
 
         add_meta_box('meta_' . self::$_cus_publish_status, self::$_cus_publish_metabox, array( 'ContentUpdateScheduler', 'create_meta_box' ), $post_type, 'side');
@@ -801,20 +800,20 @@ class ContentUpdateScheduler
                         ?>
                     </select>
                     <input type="number" name="<?php echo esc_attr($metaname); ?>_day" id="<?php echo esc_attr($metaname); ?>_day" min="1" max="31" value="<?php echo esc_attr($day); ?>" />
-                    <input type="number" name="<?php echo esc_attr($metaname); ?>_year" id="<?php echo esc_attr($metaname); ?>_year" min="<?php echo esc_attr(date('Y')); ?>" value="<?php echo esc_attr($year); ?>" />
+                    <input type="number" name="<?php echo esc_attr($metaname); ?>_year" id="<?php echo esc_attr($metaname); ?>_year" min="<?php echo esc_attr(wp_date('Y')); ?>" value="<?php echo esc_attr($year); ?>" />
                 </div>
                 <div class="components-datetime__time">
                     <input type="time" name="<?php echo esc_attr($metaname); ?>_time" id="<?php echo esc_attr($metaname); ?>_time" value="<?php echo esc_attr($time); ?>" />
                 </div>
             </div>
             <p>
-                <?php esc_html_e('Please enter Time in the site\'s local timezone', 'cus-scheduleupdate-td'); ?>
+                <?php esc_html_e('Please enter time in your site\'s configured timezone', 'cus-scheduleupdate-td'); ?>
             </p>
             <p class="description" style="margin-bottom: 1em;">
-                <strong><?php esc_html_e('Current server time:', 'cus-scheduleupdate-td'); ?></strong>
-                <span id="current-server-time"><?php echo esc_html(wp_date('F j, Y \a\t g:i A T')); ?></span>
+                <strong><?php esc_html_e('Current WordPress time:', 'cus-scheduleupdate-td'); ?></strong>
+                <span id="current-wordpress-time"><?php echo esc_html(wp_date('F j, Y H:i T')); ?></span>
                 <small style="display: block; margin-top: 0.25em; opacity: 0.7;">
-                    <?php esc_html_e('Times are in your site\'s configured timezone', 'cus-scheduleupdate-td'); ?>
+                    <?php esc_html_e('Enter times in your site\'s configured timezone shown above.', 'cus-scheduleupdate-td'); ?>
                 </small>
             </p>
             <div id="validation-messages">
@@ -848,6 +847,10 @@ class ContentUpdateScheduler
         </div>
         <script type="text/javascript">
         function initContentUpdateScheduler() {
+            // WordPress timezone info
+            var wpTimezoneOffset = <?php echo wp_timezone()->getOffset(new DateTime()) / 3600; ?>; // Hours from UTC
+            var wpTimezoneString = '<?php echo esc_js(wp_timezone_string()); ?>';
+            
             jQuery(document).ready(function($) {
                 function checkDate() {
                     // Hide all messages first
@@ -922,18 +925,27 @@ class ContentUpdateScheduler
                 
                 checkDate(); // Initial check
 
-                // Update current time display every minute
+                // Update current time display every minute using WordPress timezone
                 function updateCurrentTime() {
                     var now = new Date();
+                    // Convert UTC time to WordPress timezone
+                    var wpTime = new Date(now.getTime() + (wpTimezoneOffset * 60 * 60 * 1000));
+                    
                     var options = { 
                         year: 'numeric', 
                         month: 'long', 
                         day: 'numeric', 
-                        hour: 'numeric', 
+                        hour: '2-digit', 
                         minute: '2-digit',
-                        timeZoneName: 'short'
+                        hour12: false,
+                        timeZone: 'UTC' // Display in UTC to avoid browser conversion
                     };
-                    $('#current-server-time').text(now.toLocaleDateString('en-US', options));
+                    
+                    var timeStr = wpTime.toLocaleDateString('en-US', options);
+                    // Add timezone string
+                    timeStr += ' ' + wpTimezoneString;
+                    
+                    $('#current-wordpress-time').text(timeStr);
                 }
                 
                 // Update immediately and then every minute
@@ -999,10 +1011,11 @@ class ContentUpdateScheduler
             $tzstring = '';
         }
 
-        if (empty($tzstring)) { // Create a UTC+- zone if no timezone string exists.
-            $offset_string = sprintf('%+d', $current_offset);
-            $offset_string = str_replace(array('.25', '.5', '.75'), array(':15', ':30', ':45'), $offset_string);
-            $tzstring = 'UTC' . $offset_string;
+        if (empty($tzstring)) { // Create a valid offset timezone if no timezone string exists.
+            // Convert WordPress GMT offset to valid timezone offset format
+            $hours = intval($current_offset);
+            $minutes = abs(($current_offset - $hours) * 60);
+            $tzstring = sprintf('%+03d:%02d', $hours, $minutes);
         }
 
         // Attempt to create a DateTimeZone object to validate the timezone string
@@ -1295,28 +1308,20 @@ class ContentUpdateScheduler
                 $year = intval($_POST[$pub . '_year']);
                 $time = sanitize_text_field($_POST[$pub . '_time']);
 
-
-                // Get WordPress timezone
-                $tz = wp_timezone();
-                
-                // Create date string and explicitly set timezone
+                // Convert form data to timestamp using WordPress timezone
                 $date_string = sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
-                $date_time = DateTime::createFromFormat('Y-m-d H:i', $date_string, $tz);
-
-                if ($date_time === false) {
-                    return $post_id;
+                try {
+                    $tz = wp_timezone();
+                    $date_time = DateTime::createFromFormat('Y-m-d H:i', $date_string, $tz);
+                    if ($date_time === false) {
+                        return $post_id; // Invalid date format
+                    }
+                    // Convert to UTC timestamp for storage
+                    $date_time->setTimezone(new DateTimeZone('UTC'));
+                    $stamp = $date_time->getTimestamp();
+                } catch (Exception $e) {
+                    return $post_id; // Error creating timestamp
                 }
-
-                // Check if the date is in the past BEFORE converting to UTC
-                $current_time = new DateTime('now', $tz);
-                if ($date_time <= $current_time) {
-                    $date_time = clone $current_time;
-                    $date_time->modify('+5 minutes');
-                }
-
-                // Now convert to UTC for timestamp storage
-                $date_time->setTimezone(new DateTimeZone('UTC'));
-                $stamp = $date_time->getTimestamp();
 
                 wp_clear_scheduled_hook('cus_publish_post', array($post_id));
                 update_post_meta($post_id, $pub, $stamp);
@@ -1504,14 +1509,21 @@ class ContentUpdateScheduler
      */
     public static function cron_publish_post($ID)
     {
+        $post = get_post($ID);
+        if (!$post) {
+            return;
+        }
+
+        // Set the post author as the current user to ensure permissions are correct
+        $current_user = get_current_user_id();
+        wp_set_current_user($post->post_author);
+
         kses_remove_filters();
         $result = self::publish_post($ID);
         kses_init_filters();
-        
-        if (is_wp_error($result)) {
-            // Here you might want to add some error handling, such as notifying an admin or rescheduling the event
-        } else {
-        }
+
+        // Restore the original user
+        wp_set_current_user($current_user);
     }
 
     /**
@@ -1525,9 +1537,18 @@ class ContentUpdateScheduler
      */
     public static function get_pubdate($stamp)
     {
-        $date = new DateTime('@' . $stamp);
-        $date->setTimezone(wp_timezone());
-        return $date->format(get_option('date_format') . ' ' . get_option('time_format'));
+        // Validate timestamp
+        if (empty($stamp) || !is_numeric($stamp) || $stamp <= 0) {
+            return __('Invalid date', 'cus-scheduleupdate-td');
+        }
+        
+        try {
+            $date = new DateTime('@' . $stamp);
+            $date->setTimezone(wp_timezone());
+            return $date->format(get_option('date_format') . ' ' . get_option('time_format'));
+        } catch (Exception $e) {
+            return __('Invalid date', 'cus-scheduleupdate-td');
+        }
     }
 
     /* bhullar custom code */
@@ -1642,10 +1663,8 @@ class ContentUpdateScheduler
     public static function check_and_publish_overdue_posts() {
         global $wpdb;
 
-        // Get the WordPress timezone setting
-        $wp_timezone = wp_timezone();
-        $current_time = new DateTime('now', $wp_timezone);
-        $current_timestamp = $current_time->getTimestamp();
+        // Get current UTC timestamp for comparison with stored UTC timestamps
+        $current_timestamp = time();
 
 
         $overdue_posts = $wpdb->get_results(
@@ -1672,9 +1691,11 @@ class ContentUpdateScheduler
      * Initialize homepage scheduling functionality
      */
     public static function init_homepage_scheduling() {
-        add_action('admin_menu', array(__CLASS__, 'add_homepage_scheduling_page'));
-        add_action('wp_ajax_schedule_homepage_change', array(__CLASS__, 'handle_homepage_scheduling'));
-        add_action('wp_ajax_cancel_homepage_change', array(__CLASS__, 'handle_cancel_homepage_change'));
+        if (is_admin()) {
+            add_action('admin_menu', array(__CLASS__, 'add_homepage_scheduling_page'));
+            add_action('wp_ajax_schedule_homepage_change', array(__CLASS__, 'handle_homepage_scheduling'));
+            add_action('wp_ajax_cancel_homepage_change', array(__CLASS__, 'handle_cancel_homepage_change'));
+        }
         add_action('cus_change_homepage', array(__CLASS__, 'cron_change_homepage'));
     }
 
@@ -1879,7 +1900,7 @@ class ContentUpdateScheduler
         $scheduled_changes[] = array(
             'page_id' => $page_id,
             'timestamp' => $timestamp,
-            'scheduled_at' => current_time('timestamp')
+            'scheduled_at' => time()
         );
         update_option('cus_scheduled_homepage_changes', $scheduled_changes);
 
@@ -1919,7 +1940,7 @@ class ContentUpdateScheduler
      */
     public static function get_scheduled_homepage_changes() {
         $scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
-        $current_time = current_time('timestamp');
+        $current_time = time();
         
         // Filter out past changes
         $scheduled_changes = array_filter($scheduled_changes, function($change) use ($current_time) {
@@ -2025,12 +2046,11 @@ class ContentUpdateScheduler
                                 <td><?php echo esc_html(self::get_pubdate($post->schedule_timestamp)); ?></td>
                                 <td>
                                     <?php 
-                                    $wp_timezone = wp_timezone();
-                                    $scheduled_time = DateTime::createFromFormat('U', $post->schedule_timestamp);
-                                    $scheduled_time->setTimezone($wp_timezone);
-                                    $current_time = new DateTime('now', $wp_timezone);
-                                    
-                                    if ($scheduled_time <= $current_time) {
+                                    // Compare UTC timestamps directly
+                                    $scheduled_timestamp = (int)$post->schedule_timestamp;
+                                    $current_timestamp = time();
+
+                                    if ($scheduled_timestamp <= $current_timestamp) {
                                         echo '<span style="color: #ffb900; font-weight: bold;">⚠ ' . esc_html__('Overdue', 'cus-scheduleupdate-td') . '</span>';
                                     } else {
                                         echo '<span style="color: #00a32a;">✓ ' . esc_html__('Scheduled', 'cus-scheduleupdate-td') . '</span>';
@@ -2071,18 +2091,14 @@ add_filter('post_row_actions', array( 'ContentUpdateScheduler', 'page_row_action
 add_filter('manage_pages_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
 add_filter('page_attributes_dropdown_pages_args', array( 'ContentUpdateScheduler', 'parent_dropdown_status' ));
 
-/* Homepage scheduling functionality */
+/* Homepage scheduling functionality (admin only) */
 add_action('admin_init', function () {
-    add_filter( 'wp_dropdown_pages', array( 'ContentUpdateScheduler', 'override_static_front_page_and_post_option' ), 1 , 2);
-    ContentUpdateScheduler::init_homepage_scheduling();
+    if (is_admin()) {
+        add_filter( 'wp_dropdown_pages', array( 'ContentUpdateScheduler', 'override_static_front_page_and_post_option' ), 1 , 2);
+        ContentUpdateScheduler::init_homepage_scheduling();
+    }
 });
 
-add_action('admin_footer', function (){ ?>
-    <style>div#ui-datepicker-div {
-    z-index: 99 !important;
-}</style>
-    <?php
-});
 
 add_filter('template_redirect', array( 'ContentUpdateScheduler', 'user_restriction_scheduled_content' ), 1);
 
