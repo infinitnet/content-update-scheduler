@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 3.0.2
+Stable tag: 3.1.0
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -87,6 +87,7 @@ These hooks are useful for triggering custom notifications, cache clearing, anal
 == Changelog ==
 
 = 3.1.0 =
+* feat: Add after_publish_post hook for post-publication actions
 * fix: Correct Unicode escape sequence patterns to match Gutenberg content
 
 = 3.0.1 =
