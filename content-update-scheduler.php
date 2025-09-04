@@ -6,7 +6,7 @@
  * Description: Schedule content updates for any page or post type.
  * Author: Infinitnet
  * Author URI: https://infinitnet.io/
- * Version: 3.0.1
+ * Version: 3.1.0
  * License: GPLv3
  * Text Domain: content-update-scheduler
  *
@@ -1687,6 +1687,14 @@ class ContentUpdateScheduler
 
             // Clear the cron event after successful publishing
             wp_clear_scheduled_hook('cus_publish_post', array($post_id));
+
+            /**
+             * Fires after a scheduled post has been successfully published
+             *
+             * @param WP_Post $post the scheduled update post.
+             * @param WP_post $orig the original post.
+             */
+            do_action('ContentUpdateScheduler\\after_publish_post', $post, $orig);
 
             return $orig->ID;
         } catch (Exception $e) {

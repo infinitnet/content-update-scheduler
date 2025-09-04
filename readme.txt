@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 3.0.1
+Stable tag: 3.0.2
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -60,7 +60,34 @@ add_filter('content_update_scheduler_excluded_post_types', function($excluded_po
     });
 `
 
+= How can I hook into the publishing process?
+
+The plugin provides two action hooks that allow you to perform custom actions before and after a scheduled update is published:
+
+**Before Publishing Hook:**
+`
+add_action('ContentUpdateScheduler\\before_publish_post', function($post, $orig) {
+    // Perform actions before the scheduled update is published
+    // $post = the scheduled update post
+    // $orig = the original post being updated
+}, 10, 2);
+`
+
+**After Publishing Hook:**
+`
+add_action('ContentUpdateScheduler\\after_publish_post', function($post, $orig) {
+    // Perform actions after the scheduled update has been successfully published
+    // $post = the scheduled update post
+    // $orig = the original post that was updated
+}, 10, 2);
+`
+
+These hooks are useful for triggering custom notifications, cache clearing, analytics tracking, or any other post-publication tasks.
+
 == Changelog ==
+
+= 3.1.0 =
+* fix: Correct Unicode escape sequence patterns to match Gutenberg content
 
 = 3.0.1 =
 * fix: Prevent Unicode escape sequence corruption in Gutenberg content
