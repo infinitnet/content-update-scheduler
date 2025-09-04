@@ -326,14 +326,14 @@ class ContentUpdateScheduler
             $protected_var_content = $variation->post_content;
             $protected_var_excerpt = $variation->post_excerpt;
             
-            if (strpos($protected_var_content, '\\u') !== false) {
-                $protected_var_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+            if (strpos($protected_var_content, '\u') !== false) {
+                $protected_var_content = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $protected_var_content);
             }
             
-            if (strpos($protected_var_excerpt, '\\u') !== false) {
-                $protected_var_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+            if (strpos($protected_var_excerpt, '\u') !== false) {
+                $protected_var_excerpt = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $protected_var_excerpt);
             }
@@ -1120,17 +1120,17 @@ class ContentUpdateScheduler
             remove_action('save_post', array( 'ContentUpdateScheduler', 'save_meta' ), 10);
 
             // Protect Unicode escape sequences during status change
-            $content_needs_protection = strpos($post->post_content, '\\u') !== false;
-            $excerpt_needs_protection = strpos($post->post_excerpt, '\\u') !== false;
+            $content_needs_protection = strpos($post->post_content, '\u') !== false;
+            $excerpt_needs_protection = strpos($post->post_excerpt, '\u') !== false;
             
             if ($content_needs_protection) {
-                $post->post_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                $post->post_content = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $post->post_content);
             }
             
             if ($excerpt_needs_protection) {
-                $post->post_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                $post->post_excerpt = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $post->post_excerpt);
             }
@@ -1201,14 +1201,14 @@ class ContentUpdateScheduler
         $protected_content = $post->post_content;
         $protected_excerpt = $post->post_excerpt;
         
-        if (strpos($protected_content, '\\u') !== false) {
-            $protected_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+        if (strpos($protected_content, '\u') !== false) {
+            $protected_content = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
                 return '___UNICODE_' . $matches[1] . '___';
             }, $protected_content);
         }
         
-        if (strpos($protected_excerpt, '\\u') !== false) {
-            $protected_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+        if (strpos($protected_excerpt, '\u') !== false) {
+            $protected_excerpt = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
                 return '___UNICODE_' . $matches[1] . '___';
             }, $protected_excerpt);
         }
@@ -1612,17 +1612,17 @@ class ContentUpdateScheduler
 
             // Prevent Unicode escape sequence corruption in content and excerpt
             // WordPress may apply stripslashes() which corrupts \u003c to u003c
-            $content_has_unicode = strpos($post->post_content, '\\u') !== false;
-            $excerpt_has_unicode = strpos($post->post_excerpt, '\\u') !== false;
+            $content_has_unicode = strpos($post->post_content, '\u') !== false;
+            $excerpt_has_unicode = strpos($post->post_excerpt, '\u') !== false;
             
             if ($content_has_unicode) {
-                $post->post_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                $post->post_content = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $post->post_content);
             }
             
             if ($excerpt_has_unicode) {
-                $post->post_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                $post->post_excerpt = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $post->post_excerpt);
             }
