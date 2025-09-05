@@ -327,13 +327,13 @@ class ContentUpdateScheduler
             $protected_var_excerpt = $variation->post_excerpt;
             
             if (strpos($protected_var_content, '\u') !== false) {
-                $protected_var_content = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
+                $protected_var_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $protected_var_content);
             }
             
             if (strpos($protected_var_excerpt, '\u') !== false) {
-                $protected_var_excerpt = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
+                $protected_var_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $protected_var_excerpt);
             }
@@ -1124,13 +1124,13 @@ class ContentUpdateScheduler
             $excerpt_needs_protection = strpos($post->post_excerpt, '\u') !== false;
             
             if ($content_needs_protection) {
-                $post->post_content = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
+                $post->post_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $post->post_content);
             }
             
             if ($excerpt_needs_protection) {
-                $post->post_excerpt = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
+                $post->post_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $post->post_excerpt);
             }
@@ -1202,13 +1202,13 @@ class ContentUpdateScheduler
         $protected_excerpt = $post->post_excerpt;
         
         if (strpos($protected_content, '\u') !== false) {
-            $protected_content = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
+            $protected_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
                 return '___UNICODE_' . $matches[1] . '___';
             }, $protected_content);
         }
         
         if (strpos($protected_excerpt, '\u') !== false) {
-            $protected_excerpt = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
+            $protected_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
                 return '___UNICODE_' . $matches[1] . '___';
             }, $protected_excerpt);
         }
@@ -1616,13 +1616,13 @@ class ContentUpdateScheduler
             $excerpt_has_unicode = strpos($post->post_excerpt, '\u') !== false;
             
             if ($content_has_unicode) {
-                $post->post_content = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
+                $post->post_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $post->post_content);
             }
             
             if ($excerpt_has_unicode) {
-                $post->post_excerpt = preg_replace_callback('/\\u([0-9a-fA-F]{4})/', function($matches) {
+                $post->post_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $post->post_excerpt);
             }
