@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 5.0
 Tested up to: 6.8
-Stable tag: 3.1.0
+Stable tag: 3.1.1
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -85,6 +85,9 @@ add_action('ContentUpdateScheduler\\after_publish_post', function($post, $orig) 
 These hooks are useful for triggering custom notifications, cache clearing, analytics tracking, or any other post-publication tasks.
 
 == Changelog ==
+
+= 3.1.1 =
+* fix: Correct regex patterns for Unicode escape sequence protection
 
 = 3.1.0 =
 * feat: Add after_publish_post hook for post-publication actions
