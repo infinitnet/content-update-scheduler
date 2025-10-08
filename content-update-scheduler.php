@@ -6,7 +6,7 @@
  * Description: Schedule content updates for any page or post type.
  * Author: Infinitnet
  * Author URI: https://infinitnet.io/
- * Version: 3.1.1
+ * Version: 3.1.2
  * License: GPLv3
  * Text Domain: content-update-scheduler
  *
@@ -1762,13 +1762,13 @@ class ContentUpdateScheduler
     /* bhullar custom code */
     public static function override_static_front_page_and_post_option($html, $arg)
     {
+        // Only modify dropdowns for homepage/posts page settings
+        if (!isset($arg['name']) || !in_array($arg['name'], array('page_on_front', 'page_for_posts'), true)) {
+            return $html;
+        }
+        
         $arg['post_status'] = array('publish', 'draft','future','cus_sc_publish');
-        echo self::co_wp_dropdown_pages($arg);
-        ?>
-        <style type="text/css">
-            select#page_on_front, select#page_for_posts {float: right;margin-left: 10px;}
-        </style>
-        <?php
+        return self::co_wp_dropdown_pages($arg);
     }
 
     public static function co_wp_dropdown_pages($args = '')
@@ -2304,6 +2304,11 @@ add_action('admin_init', function () {
     if (is_admin()) {
         add_filter( 'wp_dropdown_pages', array( 'ContentUpdateScheduler', 'override_static_front_page_and_post_option' ), 1 , 2);
         ContentUpdateScheduler::init_homepage_scheduling();
+        
+        // Add CSS for homepage dropdowns via proper hook
+        add_action('admin_head', function() {
+            echo '<style type="text/css">select#page_on_front, select#page_for_posts {float: right;margin-left: 10px;}</style>';
+        });
     }
 });
 
