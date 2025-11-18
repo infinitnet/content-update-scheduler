@@ -138,7 +138,8 @@ class ContentUpdateScheduler
                 self::META_ELEMENTOR_PAGE_SETTINGS,
                 self::META_ELEMENTOR_VERSION,
                 self::META_ELEMENTOR_TEMPLATE_TYPE,
-                self::META_ELEMENTOR_CONTROLS_USAGE
+                self::META_ELEMENTOR_CONTROLS_USAGE,
+                '_elementor_css'
             ];
 
             // Get all meta at once for efficiency
@@ -153,12 +154,11 @@ class ContentUpdateScheduler
                 
                 // Special handling for Elementor's JSON data
                 if ($key === self::META_ELEMENTOR_DATA) {
-                    // Ensure valid JSON 
+                    // Validate JSON structure
                     $decoded = json_decode($value);
                     if (json_last_error() === JSON_ERROR_NONE) {
-                        // Preserve exact JSON structure with proper slashing
-                        update_post_meta($destination_id, $key, wp_slash($value));
-                    } else {
+                        // WordPress handles slashing automatically - do not use wp_slash()
+                        update_post_meta($destination_id, $key, $value);
                     }
                     continue;
                 }
@@ -1385,15 +1385,20 @@ class ContentUpdateScheduler
             // Copy meta.
             $meta = get_post_meta($source_post->ID);
             foreach ($meta as $key => $values) {
+                // Skip Elementor meta keys - they're handled separately in copy_elementor_data()
+                if (strpos($key, '_elementor') === 0) {
+                    continue;
+                }
+                
                 delete_post_meta($destination_post->ID, $key);
                 foreach ($values as $value) {
                     $processed_value = self::copy_meta_value($value);
                     
-                    if ($restore_references && is_string($processed_value) && 
+                    if ($restore_references && is_string($processed_value) &&
                         strpos($processed_value, (string)$source_post->ID) !== false) {
                         $processed_value = str_replace(
-                            (string)$source_post->ID, 
-                            (string)$destination_post->ID, 
+                            (string)$source_post->ID,
+                            (string)$destination_post->ID,
                             $processed_value
                         );
                     }
