@@ -6,7 +6,7 @@
  * Description: Schedule content updates for any page or post type.
  * Author: Infinitnet
  * Author URI: https://infinitnet.io/
- * Version: 3.1.3
+ * Version: 3.1.4
  * License: GPLv3
  * Text Domain: content-update-scheduler
  *
@@ -909,8 +909,20 @@ class ContentUpdateScheduler
                     var year = $('#<?php echo esc_js($metaname); ?>_year').val();
                     var time = $('#<?php echo esc_js($metaname); ?>_time').val();
                     
+                    // Trim whitespace from time input
+                    if (time) {
+                        time = time.trim();
+                    }
+                    
                     // Validate inputs
                     if (!month || !day || !year || !time) {
+                        $('#invalidmsg').show();
+                        return false;
+                    }
+                    
+                    // Validate time format (HH:mm) with regex
+                    var timePattern = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+                    if (!timePattern.test(time)) {
                         $('#invalidmsg').show();
                         return false;
                     }
