@@ -6,7 +6,7 @@
  * Description: Schedule content updates for any page or post type.
  * Author: Infinitnet
  * Author URI: https://infinitnet.io/
- * Version: 3.1.4
+ * Version: 3.1.5
  * License: GPLv3
  * Text Domain: content-update-scheduler
  *
@@ -964,8 +964,16 @@ class ContentUpdateScheduler
                         return false;
                     }
                     
+                    // Create dates (JavaScript interprets as browser's local timezone)
                     var selectedDate = new Date(yearInt, monthInt - 1, dayInt, parseInt(timeParts[0]), parseInt(timeParts[1]));
                     var now = new Date();
+                    
+                    // Convert user input from browser timezone to WordPress timezone
+                    // selectedDate was created in browser TZ, but needs to represent WordPress TZ
+                    var browserOffset = -selectedDate.getTimezoneOffset() / 60; // Browser's UTC offset in hours
+                    var timezoneShift = browserOffset - wpTimezoneOffset; // Hours to shift from browser to WordPress timezone
+                    
+                    selectedDate.setHours(selectedDate.getHours() + timezoneShift);
                     
                     if (isNaN(selectedDate.getTime())) {
                         $('#invalidmsg').show();
