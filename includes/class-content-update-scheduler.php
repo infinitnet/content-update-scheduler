@@ -689,13 +689,121 @@ class ContentUpdateScheduler
     {
         if ('cus_publish' === $column) {
             $post = get_post($post_id);
-            if ($post->post_status === self::$_cus_publish_status || get_post_meta($post_id, self::$_cus_publish_status . '_original', true)) {
-                $stamp = get_post_meta($post_id, self::$_cus_publish_status . '_pubdate', true);
-                if ($stamp) {
+            if (!$post instanceof WP_Post) {
+                echo '&#8212;';
+                return;
+            }
+
+            // Scheduled update rows show their own scheduled date.
+            if ($post->post_status === self::$_cus_publish_status) {
+                $stamp = (int) get_post_meta($post_id, self::$_cus_publish_status . '_pubdate', true);
+                if ($stamp > 0) {
                     echo esc_html(self::get_pubdate($stamp));
+                } else {
+                    echo '&#8212;';
+                }
+                return;
+            }
+
+            // Original rows show the *next* scheduled republication, if any.
+            $next = (int) self::get_next_scheduled_pubdate_for_original($post_id);
+            if ($next > 0) {
+                echo esc_html(self::get_pubdate($next));
+            } else {
+                echo '&#8212;';
+            }
+        }
+    }
+
+    /**
+     * Returns the next scheduled republication timestamp (UTC) for a given original post ID.
+     *
+     * @param int $original_post_id
+     * @return int
+     */
+    private static function get_next_scheduled_pubdate_for_original($original_post_id)
+    {
+        static $cache = array();
+
+        $original_post_id = (int) $original_post_id;
+        if ($original_post_id <= 0) {
+            return 0;
+        }
+
+        if (array_key_exists($original_post_id, $cache)) {
+            return (int) $cache[$original_post_id];
+        }
+
+        // Prime cache for all originals visible on the current admin list page (best-effort).
+        $to_prime = array();
+        global $wp_query;
+        if (isset($wp_query->posts) && is_array($wp_query->posts)) {
+            foreach ($wp_query->posts as $p) {
+                if (!$p instanceof WP_Post) {
+                    continue;
+                }
+                if ($p->post_status === self::$_cus_publish_status) {
+                    continue;
+                }
+                $pid = (int) $p->ID;
+                if ($pid > 0 && !array_key_exists($pid, $cache)) {
+                    $to_prime[] = $pid;
                 }
             }
         }
+
+        if (empty($to_prime)) {
+            $to_prime = array($original_post_id);
+        }
+
+        foreach ($to_prime as $pid) {
+            $cache[(int) $pid] = 0;
+        }
+
+        $now = time();
+        $query = new WP_Query(array(
+            'post_type'              => 'any',
+            'post_status'            => self::$_cus_publish_status,
+            'posts_per_page'         => -1,
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => true,
+            'update_post_term_cache' => false,
+            'meta_key'               => self::$_cus_publish_status . '_pubdate',
+            'orderby'                => 'meta_value_num',
+            'order'                  => 'ASC',
+            'meta_query'             => array(
+                array(
+                    'key'     => self::$_cus_publish_status . '_original',
+                    'value'   => array_map('intval', $to_prime),
+                    'compare' => 'IN',
+                ),
+                array(
+                    'key'     => self::$_cus_publish_status . '_pubdate',
+                    'value'   => $now,
+                    'compare' => '>',
+                    'type'    => 'NUMERIC',
+                ),
+            ),
+        ));
+
+        if (!empty($query->posts) && is_array($query->posts)) {
+            foreach ($query->posts as $scheduled_post) {
+                if (!$scheduled_post instanceof WP_Post) {
+                    continue;
+                }
+                $orig_id = (int) get_post_meta($scheduled_post->ID, self::$_cus_publish_status . '_original', true);
+                if ($orig_id <= 0 || !array_key_exists($orig_id, $cache) || (int) $cache[$orig_id] > 0) {
+                    continue;
+                }
+
+                $stamp = (int) get_post_meta($scheduled_post->ID, self::$_cus_publish_status . '_pubdate', true);
+                if ($stamp > $now) {
+                    $cache[$orig_id] = $stamp;
+                }
+            }
+        }
+
+        return (int) ($cache[$original_post_id] ?? 0);
     }
 
     /**
@@ -1214,6 +1322,9 @@ class ContentUpdateScheduler
         
         // Ensure the keep_dates setting is not copied from previous scheduled updates
         delete_post_meta($new_post_id, self::$_cus_publish_status . '_keep_dates');
+        // Ensure a recursive copy doesn't inherit an existing schedule timestamp.
+        delete_post_meta($new_post_id, self::$_cus_publish_status . '_pubdate');
+        wp_clear_scheduled_hook('cus_publish_post', array((int) $new_post_id));
 
         // Handle WooCommerce products
         if (class_exists('WooCommerce') && $post->post_type === 'product') {
@@ -1639,6 +1750,10 @@ class ContentUpdateScheduler
             // Copy meta and terms, restoring references to the original post ID.
             delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
             self::copy_meta_and_terms($post->ID, $orig->ID, true);
+            // Ensure internal scheduling meta never persists on the original post.
+            delete_post_meta($orig->ID, self::$_cus_publish_status . '_original');
+            delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
+            delete_post_meta($orig->ID, self::$_cus_publish_status . '_keep_dates');
 
             // Restore stock on the original product after meta copy.
             if ($original_stock_status !== '') {
