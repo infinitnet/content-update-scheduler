@@ -10,7 +10,7 @@ defined('ABSPATH') || exit;
 class ContentUpdateScheduler
 {
     // Text domain constant
-    const TEXT_DOMAIN = 'cus-scheduleupdate-td';
+    const TEXT_DOMAIN = 'content-update-scheduler';
     
     // WooCommerce meta key constants
     const META_STOCK_STATUS = '_stock_status';
@@ -434,8 +434,8 @@ class ContentUpdateScheduler
     {
         
         self::load_plugin_textdomain();
-        self::$cus_publish_label   = __('Content Update Scheduler', 'cus-scheduleupdate-td');
-        self::$_cus_publish_metabox = __('Content Update Scheduler', 'cus-scheduleupdate-td');
+        self::$cus_publish_label   = __('Content Update Scheduler', self::TEXT_DOMAIN);
+        self::$_cus_publish_metabox = __('Content Update Scheduler', self::TEXT_DOMAIN);
         self::register_post_status();
 
         // Get all public post types plus 'product' (maintaining existing behavior)
@@ -472,10 +472,8 @@ class ContentUpdateScheduler
         add_filter('manage_edit-product_columns', array( 'ContentUpdateScheduler', 'manage_pages_columns' ));
         add_action('manage_product_posts_custom_column', array( 'ContentUpdateScheduler', 'manage_pages_custom_column' ), 10, 2);
 
-        // Set up custom cron schedule
-        if (!wp_next_scheduled('cus_check_overdue_posts')) {
-            wp_schedule_event(time(), 'five_minutes', 'cus_check_overdue_posts');
-        }
+        // Set up custom cron schedule.
+        \Infinitnet\ContentUpdateScheduler\Support\Cron::ensure_overdue_checker();
 
         // Add scheduled republications status page (admin only)
         if (is_admin()) {
@@ -492,7 +490,7 @@ class ContentUpdateScheduler
      */
     private static function load_plugin_textdomain()
     {
-        load_plugin_textdomain('cus-scheduleupdate-td', false, dirname(plugin_basename(CUS_PLUGIN_FILE)) . '/language/');
+        load_plugin_textdomain(self::TEXT_DOMAIN, false, dirname(plugin_basename(CUS_PLUGIN_FILE)) . '/language/');
     }
 
     /**
@@ -548,7 +546,7 @@ class ContentUpdateScheduler
         $exclude_from_search = ! is_admin();
 
         $args = array(
-            'label'                     => _x('Content Update Scheduler', 'Status General Name', 'cus-scheduleupdate-td'),
+            'label'                     => _x('Content Update Scheduler', 'Status General Name', self::TEXT_DOMAIN),
             'public'                    => $public,
             'internal'                  => true,
             'publicly_queryable'        => true,
@@ -557,7 +555,7 @@ class ContentUpdateScheduler
             'show_in_admin_all_list'    => true,
             'show_in_admin_status_list' => true,
             // translators: number of posts.
-            'label_count'               => _n_noop('Content Update Scheduler <span class="count">(%s)</span>', 'Content Update Scheduler <span class="count">(%s)</span>', 'cus-scheduleupdate-td'),
+            'label_count'               => _n_noop('Content Update Scheduler <span class="count">(%s)</span>', 'Content Update Scheduler <span class="count">(%s)</span>', self::TEXT_DOMAIN),
         );
 
         register_post_status(self::$_cus_publish_status, $args);
@@ -608,7 +606,7 @@ class ContentUpdateScheduler
             $states = array( self::$cus_publish_label );
             if (! $type->hierarchical) {
                 $orig = get_post(get_post_meta($post->ID, self::$_cus_publish_status . '_original', true));
-                array_push($states, __('Original', 'cus-scheduleupdate-td') . ': ' . $orig->post_title);
+                array_push($states, __('Original', self::TEXT_DOMAIN) . ': ' . $orig->post_title);
             }
         }
 
@@ -645,11 +643,11 @@ class ContentUpdateScheduler
             $publish_cap = ($post_type_object && isset($post_type_object->cap->publish_posts)) ? $post_type_object->cap->publish_posts : 'publish_posts';
 
             if (current_user_can($publish_cap)) {
-                $actions['publish_now'] = '<a href="' . esc_url($publish_now_url) . '">' . __('Publish Now', 'cus-scheduleupdate-td') . '</a>';
+                $actions['publish_now'] = '<a href="' . esc_url($publish_now_url) . '">' . __('Publish Now', self::TEXT_DOMAIN) . '</a>';
             }
             $actions['copy_to_publish'] = '<a href="' . esc_url($copy_url) . '">' . self::$cus_publish_label . '</a>';
             if (ContentUpdateScheduler_Options::get('tsu_recursive')) {
-                $actions['copy_to_publish'] = '<a href="' . esc_url($copy_url) . '">' . __('Schedule recursive', 'cus-scheduleupdate-td') . '</a>';
+                $actions['copy_to_publish'] = '<a href="' . esc_url($copy_url) . '">' . __('Schedule recursive', self::TEXT_DOMAIN) . '</a>';
             }
         } elseif ('trash' !== $post->post_status) {
             $actions['copy_to_publish'] = '<a href="' . esc_url($copy_url) . '">' . self::$cus_publish_label . '</a>';
@@ -671,7 +669,7 @@ class ContentUpdateScheduler
         foreach ($columns as $key => $val) {
             $new[ $key ] = $val;
             if ('title' === $key) {
-                $new['cus_publish'] = esc_html__('Republication Date', 'cus-scheduleupdate-td');
+                $new['cus_publish'] = esc_html__('Republication Date', self::TEXT_DOMAIN);
             }
         }
         return $new;
@@ -717,16 +715,30 @@ class ContentUpdateScheduler
             }
 
             if (!current_user_can('edit_post', $post_id)) {
-                wp_die(esc_html__('You do not have permission to edit this content.', 'cus-scheduleupdate-td'));
+                \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
+                    'error',
+                    __('You do not have permission to edit this content.', self::TEXT_DOMAIN)
+                );
+                wp_safe_redirect(wp_get_referer() ? wp_get_referer() : admin_url('edit.php'));
+                exit;
             }
 
             $post = get_post($post_id);
             if (!$post) {
-                wp_die(esc_html__('Post not found.', 'cus-scheduleupdate-td'));
+                \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
+                    'error',
+                    __('Post not found.', self::TEXT_DOMAIN)
+                );
+                wp_safe_redirect(wp_get_referer() ? wp_get_referer() : admin_url('edit.php'));
+                exit;
             }
 
             $publishing_id = self::create_publishing_post($post);
             if (!is_wp_error($publishing_id) && $publishing_id) {
+                \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
+                    'success',
+                    __('Scheduled update created.', self::TEXT_DOMAIN)
+                );
                 wp_safe_redirect(admin_url('post.php?action=edit&post=' . absint($publishing_id)));
                 exit;
             }
@@ -734,31 +746,16 @@ class ContentUpdateScheduler
             if (is_wp_error($publishing_id)) {
                 $error_message = $publishing_id->get_error_message();
             } else {
-                $error_message = __('Unable to create scheduled update.', 'cus-scheduleupdate-td');
+                $error_message = __('Unable to create scheduled update.', self::TEXT_DOMAIN);
             }
 
-                // translators: %1$s: post type, %2$s: post title.
-                $html  = '<h1>' . __('Content Scheduling Failed', 'cus-scheduleupdate-td') . '</h1>';
-                $html .= '<p>' . sprintf(
-                    __('Unable to create a scheduled update for %1$s <strong>%2$s</strong>', 'cus-scheduleupdate-td'),
-                    esc_html($post->post_type),
-                    esc_html($post->post_title)
-                ) . '</p>';
-                $html .= '<p><strong>' . __('Error:', 'cus-scheduleupdate-td') . '</strong> ' . esc_html($error_message) . '</p>';
-                $html .= '<h3>' . __('Possible reasons:', 'cus-scheduleupdate-td') . '</h3>';
-                $html .= '<ul>';
-                $html .= '<li>' . __('Insufficient disk space or memory limits', 'cus-scheduleupdate-td') . '</li>';
-                $html .= '<li>' . __('Database connection issues', 'cus-scheduleupdate-td') . '</li>';
-                $html .= '<li>' . __('Plugin conflicts or WordPress permission issues', 'cus-scheduleupdate-td') . '</li>';
-                $html .= '</ul>';
-                $html .= '<h3>' . __('What to try:', 'cus-scheduleupdate-td') . '</h3>';
-                $html .= '<ol>';
-                $html .= '<li>' . __('Check WordPress debug logs for specific error details', 'cus-scheduleupdate-td') . '</li>';
-                $html .= '<li>' . __('Ensure you have sufficient permissions for this post type', 'cus-scheduleupdate-td') . '</li>';
-                $html .= '<li>' . __('Try again in a few minutes', 'cus-scheduleupdate-td') . '</li>';
-                $html .= '</ol>';
-                $html .= '<p><a href="' . esc_attr(admin_url('edit.php?post_type=' . $post->post_type)) . '" class="button button-primary">' . __('Back to Post List', 'cus-scheduleupdate-td') . '</a></p>';
-                wp_die($html); // WPCS: XSS okay.
+            // translators: %s: error message.
+            \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
+                'error',
+                sprintf(__('Content scheduling failed: %s', self::TEXT_DOMAIN), $error_message)
+            );
+            wp_safe_redirect(admin_url('edit.php?post_type=' . $post->post_type));
+            exit;
         }
     }
 
@@ -779,7 +776,12 @@ class ContentUpdateScheduler
 
             $post = get_post($post_id);
             if (!$post) {
-                wp_die(esc_html__('Post not found.', 'cus-scheduleupdate-td'));
+                \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
+                    'error',
+                    __('Post not found.', self::TEXT_DOMAIN)
+                );
+                wp_safe_redirect(wp_get_referer() ? wp_get_referer() : admin_url('edit.php'));
+                exit;
             }
             
             $post_type_object = get_post_type_object($post->post_type);
@@ -787,21 +789,29 @@ class ContentUpdateScheduler
 
             // Check if user has permission to publish this post type.
             if (!current_user_can($publish_cap)) {
-                wp_die(esc_html__('You do not have permission to publish content.', 'cus-scheduleupdate-td'));
+                \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
+                    'error',
+                    __('You do not have permission to publish content.', self::TEXT_DOMAIN)
+                );
+                wp_safe_redirect(wp_get_referer() ? wp_get_referer() : admin_url('edit.php'));
+                exit;
             }
             
             $result = self::publish_post($post->ID);
             if (is_wp_error($result)) {
-                $html  = '<h1>' . __('Publishing Failed', 'cus-scheduleupdate-td') . '</h1>';
-                $html .= '<p>' . sprintf(
-                    __('Failed to publish scheduled update for <strong>%s</strong>', 'cus-scheduleupdate-td'),
-                    esc_html($post->post_title)
-                ) . '</p>';
-                $html .= '<p><strong>' . __('Error:', 'cus-scheduleupdate-td') . '</strong> ' . esc_html($result->get_error_message()) . '</p>';
-                $html .= '<p>' . __('Please try again or contact your site administrator if this problem persists.', 'cus-scheduleupdate-td') . '</p>';
-                $html .= '<p><a href="' . esc_attr(admin_url('edit.php?post_type=' . $post->post_type)) . '" class="button button-primary">' . __('Back to Post List', 'cus-scheduleupdate-td') . '</a></p>';
-                wp_die($html);
+                // translators: %s: error message.
+                \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
+                    'error',
+                    sprintf(__('Publishing failed: %s', self::TEXT_DOMAIN), $result->get_error_message())
+                );
+                wp_safe_redirect(admin_url('edit.php?post_type=' . $post->post_type));
+                exit;
             }
+
+            \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
+                'success',
+                __('Scheduled update published.', self::TEXT_DOMAIN)
+            );
             wp_safe_redirect(admin_url('edit.php?post_type=' . $post->post_type));
             exit;
         }
@@ -891,10 +901,10 @@ class ContentUpdateScheduler
         ?>
         <div class="block-editor-publish-date-time-picker">
             <p>
-                <strong><?php esc_html_e('Republication Date', 'cus-scheduleupdate-td'); ?></strong>
+                <strong><?php esc_html_e('Republication Date', self::TEXT_DOMAIN); ?></strong>
             </p>
             <p class="description">
-                <?php esc_html_e('This schedules an UPDATE to existing content. The original post remains published with its current date.', 'cus-scheduleupdate-td'); ?>
+                <?php esc_html_e('This schedules an UPDATE to existing content. The original post remains published with its current date.', self::TEXT_DOMAIN); ?>
             </p>
             <div class="components-datetime">
                 <div class="components-datetime__date">
@@ -907,7 +917,7 @@ class ContentUpdateScheduler
                         foreach ($months as $index => $month_name) {
                             $month_number = $index + 1;
                             $selected = ($month_number == intval($month)) ? 'selected' : '';
-                            echo '<option value="' . esc_attr($month_number) . '" ' . $selected . '>' . esc_html__($month_name, 'cus-scheduleupdate-td') . '</option>';
+                            echo '<option value="' . esc_attr($month_number) . '" ' . $selected . '>' . esc_html__($month_name, self::TEXT_DOMAIN) . '</option>';
                         }
                         ?>
                     </select>
@@ -919,29 +929,29 @@ class ContentUpdateScheduler
                 </div>
             </div>
             <p>
-                <?php esc_html_e('Please enter time in your site\'s configured timezone', 'cus-scheduleupdate-td'); ?>
+                <?php esc_html_e('Please enter time in your site\'s configured timezone', self::TEXT_DOMAIN); ?>
             </p>
             <p class="description" style="margin-bottom: 1em;">
-                <strong><?php esc_html_e('Current WordPress time:', 'cus-scheduleupdate-td'); ?></strong>
+                <strong><?php esc_html_e('Current WordPress time:', self::TEXT_DOMAIN); ?></strong>
                 <span id="current-wordpress-time"><?php echo esc_html(wp_date('F j, Y H:i T')); ?></span>
                 <small style="display: block; margin-top: 0.25em; opacity: 0.7;">
-                    <?php esc_html_e('Enter times in your site\'s configured timezone shown above.', 'cus-scheduleupdate-td'); ?>
+                    <?php esc_html_e('Enter times in your site\'s configured timezone shown above.', self::TEXT_DOMAIN); ?>
                 </small>
             </p>
             <div id="validation-messages">
                 <div id="pastmsg" class="notice notice-warning inline" style="display:none;">
                     <p>
                         <?php
-                        echo esc_html__('The release date is in the past.', 'cus-scheduleupdate-td');
-                        echo esc_html__(' This post will be published 5 minutes from now.', 'cus-scheduleupdate-td');
+                        echo esc_html__('The release date is in the past.', self::TEXT_DOMAIN);
+                        echo esc_html__(' This post will be published 5 minutes from now.', self::TEXT_DOMAIN);
                         ?>
                     </p>
                 </div>
                 <div id="invalidmsg" class="notice notice-error inline" style="display:none;">
-                    <p><?php esc_html_e('Please enter a valid date and time.', 'cus-scheduleupdate-td'); ?></p>
+                    <p><?php esc_html_e('Please enter a valid date and time.', self::TEXT_DOMAIN); ?></p>
                 </div>
                 <div id="successmsg" class="notice notice-success inline" style="display:none;">
-                    <p><?php esc_html_e('Valid scheduling date selected.', 'cus-scheduleupdate-td'); ?></p>
+                    <p><?php esc_html_e('Valid scheduling date selected.', self::TEXT_DOMAIN); ?></p>
                 </div>
             </div>
             <div class="misc-pub-section">
@@ -950,10 +960,10 @@ class ContentUpdateScheduler
                            name="<?php echo esc_attr(self::$_cus_publish_status); ?>_keep_dates" 
                            id="<?php echo esc_attr(self::$_cus_publish_status); ?>_keep_dates"
                            <?php checked(get_post_meta($post->ID, self::$_cus_publish_status . '_keep_dates', true), 'yes'); ?>>
-                    <?php esc_html_e('Keep original publication date', 'cus-scheduleupdate-td'); ?>
+                    <?php esc_html_e('Keep original publication date', self::TEXT_DOMAIN); ?>
                 </label>
                 <p class="description">
-                    <?php esc_html_e('If checked, the original publication date will be preserved when this update is published.', 'cus-scheduleupdate-td'); ?>
+                    <?php esc_html_e('If checked, the original publication date will be preserved when this update is published.', self::TEXT_DOMAIN); ?>
                 </p>
             </div>
         </div>
@@ -1453,19 +1463,20 @@ class ContentUpdateScheduler
      */
     public static function publish_post($post_id)
     {
-
-        // Implement locking mechanism
+        // Implement locking mechanism.
         $lock_key = 'cus_publish_lock_' . $post_id;
-        if (!get_transient($lock_key)) {
-            set_transient($lock_key, true, 300); // Lock for 5 minutes
-        } else {
+        if (get_transient($lock_key)) {
             return new WP_Error('locked', 'Publish process already running for this post');
         }
+        set_transient($lock_key, true, 300); // Lock for 5 minutes.
+
+        $rollback = null;
 
         try {
-            $orig_id = get_post_meta($post_id, self::$_cus_publish_status . '_original', true);
+            $post_id = (int) $post_id;
+            $orig_id = (int) get_post_meta($post_id, self::$_cus_publish_status . '_original', true);
 
-            // break early if given post is not an actual scheduled post created by this plugin.
+            // Break early if given post is not an actual scheduled post created by this plugin.
             if (!$orig_id) {
                 return new WP_Error('no_original', 'No original post found');
             }
@@ -1480,58 +1491,155 @@ class ContentUpdateScheduler
                 return new WP_Error('scheduled_not_found', 'Scheduled post not found');
             }
 
-            // Ensure the post is not in the trash before proceeding
+            // Ensure the post is not in the trash before proceeding.
             if ($post->post_status === 'trash') {
                 return new WP_Error('post_trashed', 'Post is in trash');
             }
 
+            /**
+             * Fires before a scheduled post is being updated.
+             *
+             * @param WP_Post $post The scheduled update post.
+             * @param WP_post $orig The original post.
+             */
+            do_action('ContentUpdateScheduler\\before_publish_post', $post, $orig);
+
+            // Snapshot original state for rollback.
+            $orig_post_before = get_post($orig_id, ARRAY_A);
+            $taxonomies = get_object_taxonomies($orig->post_type);
+            $orig_terms_before = array();
+            foreach ($taxonomies as $taxonomy) {
+                $orig_terms_before[$taxonomy] = wp_get_object_terms($orig_id, $taxonomy, array('fields' => 'ids'));
+            }
+
+            $source_meta = get_post_meta($post->ID);
+            $meta_keys = is_array($source_meta) ? array_keys($source_meta) : array();
+
+            $elementor_meta_keys = array(
+                self::META_ELEMENTOR_DATA,
+                self::META_ELEMENTOR_EDIT_MODE,
+                self::META_ELEMENTOR_PAGE_SETTINGS,
+                self::META_ELEMENTOR_VERSION,
+                self::META_ELEMENTOR_TEMPLATE_TYPE,
+                self::META_ELEMENTOR_CONTROLS_USAGE,
+                '_elementor_css',
+            );
+
+            $wpml_meta_keys = array(
+                self::META_WPML_MEDIA_FEATURED,
+                self::META_WPML_MEDIA_DUPLICATE,
+                self::META_WPML_MEDIA_PROCESSED,
+            );
+
+            $meta_keys = array_values(array_unique(array_merge(
+                $meta_keys,
+                $elementor_meta_keys,
+                $wpml_meta_keys,
+                array(self::$_cus_publish_status . '_pubdate')
+            )));
+
+            $orig_meta_before = array();
+            foreach ($meta_keys as $key) {
+                $orig_meta_before[$key] = get_post_meta($orig_id, $key, false);
+            }
+
+            // Snapshot builder CSS files (best-effort).
+            $upload_dir = wp_upload_dir();
+            $css_snapshots = array();
+            $elementor_css_path = $upload_dir['basedir'] . '/elementor/css/post-' . $orig_id . '.css';
+            $css_snapshots['elementor'] = array(
+                'path'    => $elementor_css_path,
+                'exists'  => file_exists($elementor_css_path),
+                'content' => file_exists($elementor_css_path) ? @file_get_contents($elementor_css_path) : null,
+            );
+
+            $oxygen_css_path = $upload_dir['basedir'] . '/oxygen/css/' . get_post_field('post_name', $orig_id) . '-' . $orig_id . '.css';
+            $css_snapshots['oxygen'] = array(
+                'path'    => $oxygen_css_path,
+                'exists'  => file_exists($oxygen_css_path),
+                'content' => file_exists($oxygen_css_path) ? @file_get_contents($oxygen_css_path) : null,
+            );
+
+            $rollback = function ($error) use ($orig_id, $orig_post_before, $orig_terms_before, $orig_meta_before, $css_snapshots) {
+                if (!is_wp_error($error)) {
+                    $error = new WP_Error('publish_failed', 'Publish failed');
+                }
+
+                if (is_array($orig_post_before)) {
+                    wp_update_post($orig_post_before, true);
+                }
+
+                foreach ($orig_meta_before as $meta_key => $values) {
+                    delete_post_meta($orig_id, $meta_key);
+                    if (is_array($values)) {
+                        foreach ($values as $value) {
+                            add_post_meta($orig_id, $meta_key, $value);
+                        }
+                    }
+                }
+
+                foreach ($orig_terms_before as $taxonomy => $ids) {
+                    wp_set_object_terms($orig_id, array_map('intval', (array) $ids), $taxonomy, false);
+                }
+
+                foreach ($css_snapshots as $snapshot) {
+                    if (!is_array($snapshot) || empty($snapshot['path'])) {
+                        continue;
+                    }
+
+                    $path = $snapshot['path'];
+                    if (!empty($snapshot['exists'])) {
+                        @file_put_contents($path, (string) $snapshot['content']);
+                    } elseif (file_exists($path)) {
+                        @unlink($path);
+                    }
+                }
+
+                clean_post_cache($orig_id);
+                return $error;
+            };
+
+            // Preserve stock fields on the original product.
             $original_stock_status = get_post_meta($orig->ID, self::META_STOCK_STATUS, true);
             $original_stock_quantity = get_post_meta($orig->ID, self::META_STOCK_QUANTITY, true);
 
-            self::copy_elementor_data($post->ID, $orig_id);
-            self::copy_oxygen_data($post->ID, $orig_id);
-            self::handle_wpml_relationships($post->ID, $orig_id, true);
-
-            /**
-             * Fires before a scheduled post is being updated
-             *
-             * @param WP_Post $post the scheduled update post.
-             * @param WP_post $orig the original post.
-             */
-            do_action('ContentUpdateScheduler\\before_publish_post', $post, $orig);
-            
-            // Start "transaction"
-            global $wpdb;
-            $wpdb->query('START TRANSACTION');
-
+            // Copy meta and terms, restoring references to the original post ID.
             delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
-            // Copy meta and terms, restoring references to the original post ID
             self::copy_meta_and_terms($post->ID, $orig->ID, true);
 
+            // Restore stock on the original product after meta copy.
+            if ($original_stock_status !== '') {
+                update_post_meta($orig->ID, self::META_STOCK_STATUS, $original_stock_status);
+            }
+            if ($original_stock_quantity !== '') {
+                update_post_meta($orig->ID, self::META_STOCK_QUANTITY, $original_stock_quantity);
+            }
+
+            // Apply scheduled content back onto the original post.
             $post->ID = $orig->ID;
             $post->post_name = $orig->post_name;
             $post->guid = $orig->guid;
             $post->post_parent = $orig->post_parent;
             $post->post_status = $orig->post_status;
-            
+
             $keep_dates = get_post_meta($post_id, self::$_cus_publish_status . '_keep_dates', true) === 'yes';
 
             if ($keep_dates) {
-                // Keep original dates but update modified date
+                // Keep original dates but update modified date.
                 $post->post_date = $orig->post_date;
                 $post->post_date_gmt = $orig->post_date_gmt;
                 $post->post_modified = wp_date('Y-m-d H:i:s');
                 $post->post_modified_gmt = get_gmt_from_date($post->post_modified);
             } else {
-                // Use new dates
+                // Use new dates.
                 $post_date = wp_date('Y-m-d H:i:s');
-                
+
                 /**
-                 * Filter the new posts' post date
+                 * Filter the new posts' post date.
                  *
-                 * @param string  $post_date the date to be used, must be in the form of `Y-m-d H:i:s`.
-                 * @param WP_Post $post      the scheduled update post.
-                 * @param WP_Post $orig      the original post.
+                 * @param string  $post_date The date to be used, must be in the form of `Y-m-d H:i:s`.
+                 * @param WP_Post $post      The scheduled update post.
+                 * @param WP_Post $orig      The original post.
                  */
                 $post_date = apply_filters('ContentUpdateScheduler\\publish_post_date', $post_date, $post, $orig);
 
@@ -1541,49 +1649,46 @@ class ContentUpdateScheduler
                 $post->post_modified_gmt = $post->post_date_gmt;
             }
 
-            delete_post_meta($orig->ID, self::$_cus_publish_status . '_pubdate');
-
-            // Prevent Unicode escape sequence corruption in content and excerpt
-            // WordPress may apply stripslashes() which corrupts \u003c to u003c
+            // Prevent Unicode escape sequence corruption in content and excerpt.
             $content_has_unicode = strpos($post->post_content, '\u') !== false;
             $excerpt_has_unicode = strpos($post->post_excerpt, '\u') !== false;
-            
+
             if ($content_has_unicode) {
-                $post->post_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                $post->post_content = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function ($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $post->post_content);
             }
-            
+
             if ($excerpt_has_unicode) {
-                $post->post_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function($matches) {
+                $post->post_excerpt = preg_replace_callback('/\\\\u([0-9a-fA-F]{4})/', function ($matches) {
                     return '___UNICODE_' . $matches[1] . '___';
                 }, $post->post_excerpt);
             }
-            
+
             $result = wp_update_post($post, true);
-            
-            // Restore Unicode escapes if they were protected
-            if (!is_wp_error($result) && ($content_has_unicode || $excerpt_has_unicode)) {
+            if (is_wp_error($result)) {
+                return $rollback ? $rollback($result) : $result;
+            }
+
+            // Restore Unicode escapes if they were protected.
+            if ($content_has_unicode || $excerpt_has_unicode) {
                 $updated_post = get_post($result);
                 if ($updated_post) {
                     $update_data = array();
-                    
+
                     if ($content_has_unicode && strpos($updated_post->post_content, '___UNICODE_') !== false) {
-                        $restored_content = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function($matches) {
+                        $update_data['post_content'] = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function ($matches) {
                             return '\\u' . $matches[1];
                         }, $updated_post->post_content);
-                        $update_data['post_content'] = $restored_content;
                     }
-                    
+
                     if ($excerpt_has_unicode && strpos($updated_post->post_excerpt, '___UNICODE_') !== false) {
-                        $restored_excerpt = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function($matches) {
+                        $update_data['post_excerpt'] = preg_replace_callback('/___UNICODE_([0-9a-fA-F]{4})___/', function ($matches) {
                             return '\\u' . $matches[1];
                         }, $updated_post->post_excerpt);
-                        $update_data['post_excerpt'] = $restored_excerpt;
                     }
-                    
+
                     if (!empty($update_data)) {
-                        // Update with restored content/excerpt, bypassing filters that might corrupt it
                         global $wpdb;
                         $wpdb->update(
                             $wpdb->posts,
@@ -1592,49 +1697,37 @@ class ContentUpdateScheduler
                             array_fill(0, count($update_data), '%s'),
                             array('%d')
                         );
-                        
-                        // Clear any caches
                         clean_post_cache($result);
                     }
                 }
             }
-            if (is_wp_error($result)) {
-                $wpdb->query('ROLLBACK');
-                return $result;
+
+            // Copy builder and WPML data back onto the original (meta copy excludes Elementor keys).
+            self::copy_elementor_data($post_id, $orig_id);
+            self::copy_oxygen_data($post_id, $orig_id);
+            self::handle_wpml_relationships($post_id, $orig_id, true);
+
+            $deleted = wp_delete_post($post_id, true);
+            if (!$deleted || is_wp_error($deleted)) {
+                $delete_error = is_wp_error($deleted) ? $deleted : new WP_Error('delete_failed', 'Failed to delete scheduled update');
+                return $rollback ? $rollback($delete_error) : $delete_error;
             }
 
-            if ($original_stock_status !== '') {
-                update_post_meta($post->ID, self::META_STOCK_STATUS, $original_stock_status);
-            }
-            if ($original_stock_quantity !== '') {
-                update_post_meta($post->ID, self::META_STOCK_QUANTITY, $original_stock_quantity);
-            }
-
-            $delete_result = wp_delete_post($post_id, true);
-            if (is_wp_error($delete_result)) {
-                $wpdb->query('ROLLBACK');
-                return $delete_result;
-            }
-
-            $wpdb->query('COMMIT');
-
-            // Clear the cron event after successful publishing
+            // Clear the cron event after successful publishing.
             wp_clear_scheduled_hook('cus_publish_post', array($post_id));
 
             /**
-             * Fires after a scheduled post has been successfully published
+             * Fires after a scheduled post has been successfully published.
              *
-             * @param WP_Post $post the scheduled update post.
-             * @param WP_post $orig the original post.
+             * @param WP_Post $post The scheduled update post.
+             * @param WP_post $orig The original post.
              */
             do_action('ContentUpdateScheduler\\after_publish_post', $post, $orig);
 
             return $orig->ID;
         } catch (Exception $e) {
-            $wpdb->query('ROLLBACK');
-            // Clear cron event on error to prevent retry loops
-            wp_clear_scheduled_hook('cus_publish_post', array($post_id));
-            return new WP_Error('publish_exception', $e->getMessage());
+            $error = new WP_Error('publish_exception', $e->getMessage());
+            return $rollback ? $rollback($error) : $error;
         } finally {
             delete_transient($lock_key);
         }
@@ -1680,7 +1773,7 @@ class ContentUpdateScheduler
     {
         // Validate timestamp
         if (empty($stamp) || !is_numeric($stamp) || $stamp <= 0) {
-            return __('Invalid date', 'cus-scheduleupdate-td');
+            return __('Invalid date', self::TEXT_DOMAIN);
         }
         
         try {
@@ -1688,7 +1781,7 @@ class ContentUpdateScheduler
             $date->setTimezone(wp_timezone());
             return $date->format(get_option('date_format') . ' ' . get_option('time_format'));
         } catch (Exception $e) {
-            return __('Invalid date', 'cus-scheduleupdate-td');
+            return __('Invalid date', self::TEXT_DOMAIN);
         }
     }
 
@@ -1846,8 +1939,8 @@ class ContentUpdateScheduler
     public static function add_homepage_scheduling_page() {
         add_submenu_page(
             'options-general.php',
-            __('Schedule Homepage Changes', 'cus-scheduleupdate-td'),
-            __('Schedule Homepage', 'cus-scheduleupdate-td'),
+            __('Schedule Homepage Changes', self::TEXT_DOMAIN),
+            __('Schedule Homepage', self::TEXT_DOMAIN),
             'manage_options',
             'schedule-homepage',
             array(__CLASS__, 'homepage_scheduling_page')
@@ -1874,7 +1967,13 @@ class ContentUpdateScheduler
             $homepage_script_handle,
             'window.ContentUpdateSchedulerHomepageScheduler = ' . wp_json_encode(
                 array(
-                    'confirmCancel' => __('Are you sure you want to cancel this scheduled homepage change?', 'cus-scheduleupdate-td'),
+                    'confirmCancel'        => __('Are you sure you want to cancel this scheduled homepage change?', self::TEXT_DOMAIN),
+                    'errorMissingAjaxUrl'  => __('AJAX endpoint missing.', self::TEXT_DOMAIN),
+                    'errorMissingNonce'    => __('Security token missing. Please reload the page.', self::TEXT_DOMAIN),
+                    'errorRequestFailed'   => __('Request failed. Please check your connection and try again.', self::TEXT_DOMAIN),
+                    'errorUnknown'         => __('Unknown error', self::TEXT_DOMAIN),
+                    'scheduledSuccess'     => __('Homepage change scheduled.', self::TEXT_DOMAIN),
+                    'canceledSuccess'      => __('Homepage change canceled.', self::TEXT_DOMAIN),
                 )
             ) . ';',
             'before'
@@ -1891,25 +1990,27 @@ class ContentUpdateScheduler
         ?>
         <div class="wrap">
             <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
+
+            <div id="cus-homepage-notices"></div>
             
             <div class="card">
-                <h2><?php esc_html_e('Schedule New Homepage Change', 'cus-scheduleupdate-td'); ?></h2>
+                <h2><?php esc_html_e('Schedule New Homepage Change', self::TEXT_DOMAIN); ?></h2>
                 <form id="schedule-homepage-form">
                     <?php wp_nonce_field('schedule_homepage_change', 'homepage_nonce'); ?>
                     
                     <table class="form-table">
                         <tr>
                             <th scope="row">
-                                <label for="new_homepage"><?php esc_html_e('New Homepage', 'cus-scheduleupdate-td'); ?></label>
+                                <label for="new_homepage"><?php esc_html_e('New Homepage', self::TEXT_DOMAIN); ?></label>
                             </th>
                             <td>
                                 <select name="new_homepage" id="new_homepage" required>
-                                    <option value=""><?php esc_html_e('Select a page...', 'cus-scheduleupdate-td'); ?></option>
+                                    <option value=""><?php esc_html_e('Select a page...', self::TEXT_DOMAIN); ?></option>
                                     <?php foreach ($pages as $page): ?>
                                         <option value="<?php echo esc_attr($page->ID); ?>">
                                             <?php echo esc_html($page->post_title); ?>
                                             <?php if ($page->post_status === 'cus_sc_publish'): ?>
-                                                (<?php esc_html_e('Scheduled Update', 'cus-scheduleupdate-td'); ?>)
+                                                (<?php esc_html_e('Scheduled Update', self::TEXT_DOMAIN); ?>)
                                             <?php endif; ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -1918,31 +2019,32 @@ class ContentUpdateScheduler
                         </tr>
                         <tr>
                             <th scope="row">
-                                <label for="schedule_date"><?php esc_html_e('Schedule Date', 'cus-scheduleupdate-td'); ?></label>
+                                <label for="schedule_date"><?php esc_html_e('Schedule Date', self::TEXT_DOMAIN); ?></label>
                             </th>
                             <td>
                                 <input type="date" name="schedule_date" id="schedule_date" required>
                                 <input type="time" name="schedule_time" id="schedule_time" required>
-                                <p class="description"><?php esc_html_e('Date and time when the homepage should change', 'cus-scheduleupdate-td'); ?></p>
+                                <p class="description"><?php esc_html_e('Date and time when the homepage should change', self::TEXT_DOMAIN); ?></p>
                             </td>
                         </tr>
                     </table>
                     
                     <p class="submit">
-                        <button type="submit" class="button button-primary"><?php esc_html_e('Schedule Homepage Change', 'cus-scheduleupdate-td'); ?></button>
+                        <button type="submit" class="button button-primary"><?php esc_html_e('Schedule Homepage Change', self::TEXT_DOMAIN); ?></button>
+                        <span class="spinner" style="float:none;"></span>
                     </p>
                 </form>
             </div>
 
             <?php if (!empty($scheduled_changes)): ?>
             <div class="card">
-                <h2><?php esc_html_e('Scheduled Homepage Changes', 'cus-scheduleupdate-td'); ?></h2>
+                <h2><?php esc_html_e('Scheduled Homepage Changes', self::TEXT_DOMAIN); ?></h2>
                 <table class="wp-list-table widefat fixed striped">
                     <thead>
                         <tr>
-                            <th><?php esc_html_e('New Homepage', 'cus-scheduleupdate-td'); ?></th>
-                            <th><?php esc_html_e('Scheduled Date', 'cus-scheduleupdate-td'); ?></th>
-                            <th><?php esc_html_e('Actions', 'cus-scheduleupdate-td'); ?></th>
+                            <th><?php esc_html_e('New Homepage', self::TEXT_DOMAIN); ?></th>
+                            <th><?php esc_html_e('Scheduled Date', self::TEXT_DOMAIN); ?></th>
+                            <th><?php esc_html_e('Actions', self::TEXT_DOMAIN); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -1954,7 +2056,7 @@ class ContentUpdateScheduler
                                 <a href="#" class="button button-small cancel-homepage-change" 
                                    data-timestamp="<?php echo esc_attr($change['timestamp']); ?>"
                                    data-page-id="<?php echo esc_attr($change['page_id']); ?>">
-                                    <?php esc_html_e('Cancel', 'cus-scheduleupdate-td'); ?>
+                                    <?php esc_html_e('Cancel', self::TEXT_DOMAIN); ?>
                                 </a>
                             </td>
                         </tr>
@@ -2095,8 +2197,8 @@ class ContentUpdateScheduler
     public static function add_republications_status_page() {
         add_submenu_page(
             'tools.php',
-            __('Scheduled Republications', 'cus-scheduleupdate-td'),
-            __('Scheduled Republications', 'cus-scheduleupdate-td'),
+            __('Scheduled Republications', self::TEXT_DOMAIN),
+            __('Scheduled Republications', self::TEXT_DOMAIN),
             'manage_options',
             'scheduled-republications',
             array(__CLASS__, 'republications_status_page')
@@ -2107,82 +2209,6 @@ class ContentUpdateScheduler
      * Render scheduled republications status page
      */
     public static function republications_status_page() {
-        if (!current_user_can('manage_options')) {
-            return;
-        }
-
-        // Get scheduled republications
-        global $wpdb;
-        $scheduled_posts = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT p.ID, p.post_title, pm.meta_value as schedule_timestamp 
-                FROM {$wpdb->posts} p 
-                INNER JOIN {$wpdb->postmeta} pm ON p.ID = pm.post_id 
-                WHERE p.post_status = %s 
-                AND pm.meta_key = %s 
-                ORDER BY pm.meta_value ASC",
-                self::$_cus_publish_status,
-                self::$_cus_publish_status . '_pubdate'
-            )
-        );
-
-        ?>
-        <div class="wrap">
-            <h1><?php echo esc_html(get_admin_page_title()); ?></h1>
-            <p><?php esc_html_e('This page shows all currently scheduled republications.', 'cus-scheduleupdate-td'); ?></p>
-
-            <table class="wp-list-table widefat fixed striped">
-                <thead>
-                    <tr>
-                        <th><?php esc_html_e('Original Post', 'cus-scheduleupdate-td'); ?></th>
-                        <th><?php esc_html_e('Scheduled Date', 'cus-scheduleupdate-td'); ?></th>
-                        <th><?php esc_html_e('Status', 'cus-scheduleupdate-td'); ?></th>
-                        <th><?php esc_html_e('Actions', 'cus-scheduleupdate-td'); ?></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (!empty($scheduled_posts)): ?>
-                        <?php foreach ($scheduled_posts as $post): ?>
-                            <tr>
-                                <td>
-                                    <?php 
-                                    $original_id = get_post_meta($post->ID, self::$_cus_publish_status . '_original', true);
-                                    if ($original_id) {
-                                        echo '<strong>' . esc_html(get_the_title($original_id)) . '</strong>';
-                                        echo '<br><small>' . esc_html(get_the_title($post->ID)) . ' (' . esc_html__('Update', 'cus-scheduleupdate-td') . ')</small>';
-                                    } else {
-                                        echo '<strong>' . esc_html($post->post_title) . '</strong>';
-                                    }
-                                    ?>
-                                </td>
-                                <td><?php echo esc_html(self::get_pubdate($post->schedule_timestamp)); ?></td>
-                                <td>
-                                    <?php 
-                                    // Compare UTC timestamps directly
-                                    $scheduled_timestamp = (int)$post->schedule_timestamp;
-                                    $current_timestamp = time();
-
-                                    if ($scheduled_timestamp <= $current_timestamp) {
-                                        echo '<span style="color: #ffb900; font-weight: bold;">⚠ ' . esc_html__('Overdue', 'cus-scheduleupdate-td') . '</span>';
-                                    } else {
-                                        echo '<span style="color: #00a32a;">✓ ' . esc_html__('Scheduled', 'cus-scheduleupdate-td') . '</span>';
-                                    }
-                                    ?>
-                                </td>
-                                <td>
-                                    <a href="<?php echo esc_url(get_edit_post_link($post->ID)); ?>" class="button button-small"><?php esc_html_e('Edit Update', 'cus-scheduleupdate-td'); ?></a>
-                                    <a href="<?php echo esc_url(admin_url('admin.php?action=workflow_publish_now&post=' . $post->ID . '&n=' . wp_create_nonce('workflow_publish_now' . $post->ID))); ?>" class="button button-primary button-small"><?php esc_html_e('Publish Now', 'cus-scheduleupdate-td'); ?></a>
-                                </td>
-                            </tr>
-                        <?php endforeach; ?>
-                    <?php else: ?>
-                        <tr>
-                            <td colspan="4"><?php esc_html_e('No scheduled republications found.', 'cus-scheduleupdate-td'); ?></td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </div>
-        <?php
+        \Infinitnet\ContentUpdateScheduler\Admin\ScheduledRepublicationsPage::render();
     }
 }

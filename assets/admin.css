@@ -1,0 +1,16 @@
+/* Admin-only tweaks for native WordPress screens. */
+select#page_on_front,
+select#page_for_posts {
+	float: right;
+	margin-left: 10px;
+}
+
+#cus-homepage-notices:empty {
+	display: none;
+}
+
+#cus-homepage-notices {
+	margin-top: 12px;
+	margin-bottom: 12px;
+}
+

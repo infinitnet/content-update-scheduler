@@ -46,7 +46,7 @@ class ContentUpdateScheduler_Options
 
         add_settings_field(
             'tsu_field_visible',
-            __('Post Visibility', 'cus-scheduleupdate-td'),
+            __('Post Visibility', 'content-update-scheduler'),
             array( __CLASS__, 'field_visible_cb' ),
             'tsu',
             'tsu_section',
@@ -58,7 +58,7 @@ class ContentUpdateScheduler_Options
 
         add_settings_field(
             'tsu_field_recursive',
-            __('Recursive Scheduling', 'cus-scheduleupdate-td'),
+            __('Recursive Scheduling', 'content-update-scheduler'),
             array( __CLASS__, 'field_recursive_cb' ),
             'tsu',
             'tsu_section',
@@ -175,7 +175,7 @@ class ContentUpdateScheduler_Options
      */
     public static function field_visible_cb($args)
     {
-        self::render_checkbox_field($args, __('Scheduled posts are visible for anonymous users in the frontend', 'cus-scheduleupdate-td'));
+        self::render_checkbox_field($args, __('Scheduled posts are visible for anonymous users in the frontend', 'content-update-scheduler'));
     }
 
     /**
@@ -187,7 +187,7 @@ class ContentUpdateScheduler_Options
      */
     public static function field_recursive_cb($args)
     {
-        self::render_checkbox_field($args, __('Allow recursive scheduling', 'cus-scheduleupdate-td'));
+        self::render_checkbox_field($args, __('Allow recursive scheduling', 'content-update-scheduler'));
     }
 
     /**
