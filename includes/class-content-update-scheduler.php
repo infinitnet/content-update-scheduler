@@ -1512,6 +1512,28 @@ class ContentUpdateScheduler
                 $orig_terms_before[$taxonomy] = wp_get_object_terms($orig_id, $taxonomy, array('fields' => 'ids'));
             }
 
+            // Snapshot WPML language details for rollback (best-effort).
+            $wpml_language_before = null;
+            if (defined('ICL_SITEPRESS_VERSION')) {
+                $post_type = get_post_type($orig_id);
+                if ($post_type) {
+                    $element_type = 'post_' . $post_type;
+                    $details = apply_filters('wpml_element_language_details', null, array(
+                        'element_id'   => $orig_id,
+                        'element_type' => $element_type,
+                    ));
+
+                    if ($details) {
+                        $wpml_language_before = array(
+                            'element_type'         => $element_type,
+                            'trid'                 => apply_filters('wpml_element_trid', null, $orig_id, $element_type),
+                            'language_code'        => isset($details->language_code) ? $details->language_code : null,
+                            'source_language_code' => isset($details->source_language_code) ? $details->source_language_code : null,
+                        );
+                    }
+                }
+            }
+
             $source_meta = get_post_meta($post->ID);
             $meta_keys = is_array($source_meta) ? array_keys($source_meta) : array();
 
@@ -1560,7 +1582,7 @@ class ContentUpdateScheduler
                 'content' => file_exists($oxygen_css_path) ? @file_get_contents($oxygen_css_path) : null,
             );
 
-            $rollback = function ($error) use ($orig_id, $orig_post_before, $orig_terms_before, $orig_meta_before, $css_snapshots) {
+            $rollback = function ($error) use ($orig_id, $orig_post_before, $orig_terms_before, $orig_meta_before, $css_snapshots, $wpml_language_before) {
                 if (!is_wp_error($error)) {
                     $error = new WP_Error('publish_failed', 'Publish failed');
                 }
@@ -1580,6 +1602,17 @@ class ContentUpdateScheduler
 
                 foreach ($orig_terms_before as $taxonomy => $ids) {
                     wp_set_object_terms($orig_id, array_map('intval', (array) $ids), $taxonomy, false);
+                }
+
+                // Restore WPML language details if available.
+                if (defined('ICL_SITEPRESS_VERSION') && is_array($wpml_language_before) && !empty($wpml_language_before['element_type'])) {
+                    do_action('wpml_set_element_language_details', array(
+                        'element_id'           => $orig_id,
+                        'element_type'         => $wpml_language_before['element_type'],
+                        'trid'                 => $wpml_language_before['trid'],
+                        'language_code'        => $wpml_language_before['language_code'],
+                        'source_language_code' => $wpml_language_before['source_language_code'],
+                    ));
                 }
 
                 foreach ($css_snapshots as $snapshot) {
