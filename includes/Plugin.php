@@ -76,7 +76,7 @@ final class Plugin
         }
 
         add_filter('wp_dropdown_pages', array('ContentUpdateScheduler', 'override_static_front_page_and_post_option'), 1, 2);
-        ContentUpdateScheduler::init_homepage_scheduling();
+        \ContentUpdateScheduler::init_homepage_scheduling();
     }
 
     /**
@@ -116,7 +116,7 @@ final class Plugin
     public static function activate()
     {
         if (class_exists('ContentUpdateScheduler')) {
-            ContentUpdateScheduler::register_post_status();
+            \ContentUpdateScheduler::register_post_status();
         }
 
         Cron::ensure_overdue_checker();
@@ -134,11 +134,10 @@ final class Plugin
         wp_clear_scheduled_hook('cus_check_overdue_posts');
 
         if (class_exists('ContentUpdateScheduler')) {
-            ContentUpdateScheduler::register_post_status();
+            \ContentUpdateScheduler::register_post_status();
         }
 
         Cron::clear_all_scheduled_update_events();
         Cron::clear_all_homepage_change_events();
     }
 }
-
