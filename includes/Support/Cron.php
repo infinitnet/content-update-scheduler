@@ -89,8 +89,14 @@ final class Cron
                 continue;
             }
             $page_id = isset($change['page_id']) ? (int) $change['page_id'] : 0;
+            $timestamp = isset($change['timestamp']) ? (int) $change['timestamp'] : 0;
             if ($page_id > 0) {
+                // Back-compat: events may exist with args = array($page_id).
                 wp_clear_scheduled_hook('cus_change_homepage', array($page_id));
+                // New format: args = array($page_id, $timestamp).
+                if ($timestamp > 0) {
+                    wp_clear_scheduled_hook('cus_change_homepage', array($page_id, $timestamp));
+                }
             }
         }
     }
@@ -115,16 +121,26 @@ final class Cron
             $timestamp = isset($change['timestamp']) ? (int) $change['timestamp'] : 0;
             $page_id = isset($change['page_id']) ? (int) $change['page_id'] : 0;
 
-            if ($timestamp <= $now || $page_id <= 0) {
+            if ($timestamp <= 0 || $page_id <= 0) {
                 continue;
             }
 
-            if (wp_next_scheduled('cus_change_homepage', array($page_id))) {
+            $new_args = array($page_id, $timestamp);
+            $old_args = array($page_id);
+
+            // If an old-format event exists, unschedule it so we can schedule the new-format args.
+            if (wp_next_scheduled('cus_change_homepage', $old_args)) {
+                wp_unschedule_event($timestamp, 'cus_change_homepage', $old_args);
+            }
+
+            if (wp_next_scheduled('cus_change_homepage', $new_args)) {
                 continue;
             }
 
-            wp_schedule_single_event($timestamp, 'cus_change_homepage', array($page_id));
+            // If the scheduled time is already past, fire ASAP (best-effort recovery from missed cron).
+            $run_at = ($timestamp <= $now) ? ($now + 60) : $timestamp;
+
+            wp_schedule_single_event($run_at, 'cus_change_homepage', $new_args);
         }
     }
 }
-

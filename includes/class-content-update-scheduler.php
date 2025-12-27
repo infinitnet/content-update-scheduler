@@ -605,8 +605,11 @@ class ContentUpdateScheduler
         if ($arg !== self::$cus_publish_label && $post->post_status === self::$_cus_publish_status) {
             $states = array( self::$cus_publish_label );
             if (! $type->hierarchical) {
-                $orig = get_post(get_post_meta($post->ID, self::$_cus_publish_status . '_original', true));
-                array_push($states, __('Original', self::TEXT_DOMAIN) . ': ' . $orig->post_title);
+                $orig_id = (int) get_post_meta($post->ID, self::$_cus_publish_status . '_original', true);
+                $orig = $orig_id ? get_post($orig_id) : null;
+                if ($orig instanceof WP_Post) {
+                    array_push($states, __('Original', self::TEXT_DOMAIN) . ': ' . $orig->post_title);
+                }
             }
         }
 
@@ -1235,7 +1238,13 @@ class ContentUpdateScheduler
             $original = get_post_meta($post->ID, self::$_cus_publish_status . '_original', true);
         }
         
-        $new_author = get_user_by('id', $post->post_author);
+        $new_author_id = (int) $post->post_author;
+        if ($new_author_id > 0 && !get_user_by('id', $new_author_id)) {
+            $new_author_id = 0;
+        }
+        if ($new_author_id <= 0) {
+            $new_author_id = (int) get_current_user_id();
+        }
 
         // Protect Unicode escape sequences in content and excerpt before copying
         $protected_content = $post->post_content;
@@ -1258,7 +1267,7 @@ class ContentUpdateScheduler
             'menu_order'     => $post->menu_order,
             'comment_status' => $post->comment_status,
             'ping_status'    => $post->ping_status,
-            'post_author'    => $new_author->ID,
+            'post_author'    => $new_author_id,
             'post_content'   => $protected_content,
             'post_excerpt'   => $protected_excerpt,
             'post_mime_type' => $post->mime_type,
@@ -1491,7 +1500,9 @@ class ContentUpdateScheduler
             if (!isset($_POST[$nonce]) || !wp_verify_nonce(sanitize_text_field(wp_unslash($_POST[$nonce])), basename(CUS_PLUGIN_FILE))) {
                 return $post_id;
             }
-            if (!current_user_can(get_post_type_object($post->post_type)->cap->edit_post, $post_id)) {
+            $type_obj = get_post_type_object($post->post_type);
+            $edit_cap = ($type_obj && isset($type_obj->cap->edit_post)) ? $type_obj->cap->edit_post : 'edit_post';
+            if (!current_user_can($edit_cap, $post_id)) {
                 return $post_id;
             }
 
@@ -2029,17 +2040,16 @@ class ContentUpdateScheduler
     }
 
     public static function check_scheduled_events() {
+        if (!function_exists('_get_cron_array')) {
+            return;
+        }
+
         $cron = _get_cron_array();
-        $found = false;
-        foreach ($cron as $timestamp => $cronhooks) {
-            if (isset($cronhooks['cus_publish_post'])) {
-                foreach ($cronhooks['cus_publish_post'] as $hash => $event) {
-                    $found = true;
-                }
-            }
+        if (!is_array($cron)) {
+            return;
         }
-        if (!$found) {
-        }
+
+        // Intentionally no-op: this method exists for legacy debugging hooks.
     }
 
     public static function check_and_publish_overdue_posts() {
@@ -2237,6 +2247,11 @@ class ContentUpdateScheduler
             wp_send_json_error('Missing required fields');
         }
 
+        $page = get_post($page_id);
+        if (!$page || $page->post_type !== 'page') {
+            wp_send_json_error('Invalid page');
+        }
+
         // Convert to timestamp using WordPress timezone
         $tz = wp_timezone();
         $date_string = $schedule_date . ' ' . $schedule_time;
@@ -2250,8 +2265,14 @@ class ContentUpdateScheduler
         $date_time->setTimezone(new DateTimeZone('UTC'));
         $timestamp = $date_time->getTimestamp();
 
+        // Normalize past timestamps to a few minutes from now (UTC), mirroring scheduled-update behavior.
+        $now = time();
+        if ($timestamp <= $now) {
+            $timestamp = $now + 300;
+        }
+
         // Schedule the homepage change
-        $scheduled = wp_schedule_single_event($timestamp, 'cus_change_homepage', array($page_id));
+        $scheduled = wp_schedule_single_event($timestamp, 'cus_change_homepage', array($page_id, $timestamp));
         
         if ($scheduled === false) {
             wp_send_json_error('Failed to schedule homepage change');
@@ -2284,8 +2305,17 @@ class ContentUpdateScheduler
         $timestamp = isset($_POST['timestamp']) ? absint(wp_unslash($_POST['timestamp'])) : 0;
         $page_id = isset($_POST['page_id']) ? absint(wp_unslash($_POST['page_id'])) : 0;
 
-        // Remove from WordPress cron
-        wp_clear_scheduled_hook('cus_change_homepage', array($page_id));
+        if ($timestamp <= 0 || $page_id <= 0) {
+            wp_send_json_error('Missing required fields');
+        }
+
+        // Remove only the matching cron instance (do not cancel other pending homepage changes).
+        // Use `wp_clear_scheduled_hook()` so it still works if the event was "restored" and rescheduled
+        // to a different runtime (e.g. overdue recovery).
+        wp_clear_scheduled_hook('cus_change_homepage', array($page_id, $timestamp));
+
+        // Back-compat: older installs may have scheduled events with args = array($page_id) at the same timestamp.
+        wp_unschedule_event($timestamp, 'cus_change_homepage', array($page_id));
 
         // Remove from our stored changes
         $scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
@@ -2302,27 +2332,33 @@ class ContentUpdateScheduler
      */
     public static function get_scheduled_homepage_changes() {
         $scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
-        $current_time = time();
-        
-        // Filter out past changes
-        $scheduled_changes = array_filter($scheduled_changes, function($change) use ($current_time) {
-            return $change['timestamp'] > $current_time;
+        if (!is_array($scheduled_changes)) {
+            return array();
+        }
+
+        // Display-only: do not delete overdue items here (WP-Cron might have missed them).
+        usort($scheduled_changes, function ($a, $b) {
+            $at = isset($a['timestamp']) ? (int) $a['timestamp'] : 0;
+            $bt = isset($b['timestamp']) ? (int) $b['timestamp'] : 0;
+            return $at <=> $bt;
         });
-        
-        // Update the option to remove past changes
-        update_option('cus_scheduled_homepage_changes', $scheduled_changes);
-        
+
         return $scheduled_changes;
     }
 
     /**
      * Cron job to change homepage
      */
-    public static function cron_change_homepage($page_id) {
+    public static function cron_change_homepage($page_id, $timestamp = null) {
         
         // Verify the page exists and is published
         $page = get_post($page_id);
-        if (!$page || $page->post_status !== 'publish') {
+        if (!$page || $page->post_type !== 'page') {
+            return;
+        }
+
+        // Allow scheduled-status pages too (consistent with dropdown behavior).
+        if (!in_array($page->post_status, array('publish', self::$_cus_publish_status), true)) {
             return;
         }
 
@@ -2332,8 +2368,22 @@ class ContentUpdateScheduler
         
         // Remove from scheduled changes
         $scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
-        $scheduled_changes = array_filter($scheduled_changes, function($change) use ($page_id) {
-            return $change['page_id'] != $page_id;
+        $scheduled_changes = is_array($scheduled_changes) ? $scheduled_changes : array();
+        $scheduled_changes = array_filter($scheduled_changes, function($change) use ($page_id, $timestamp) {
+            if (!is_array($change)) {
+                return false;
+            }
+            if (!isset($change['page_id'], $change['timestamp'])) {
+                return false;
+            }
+            if ((int) $change['page_id'] !== (int) $page_id) {
+                return true;
+            }
+            if ($timestamp === null) {
+                // Back-compat: cron may have been scheduled without the timestamp arg; remove by page_id.
+                return false;
+            }
+            return (int) $change['timestamp'] !== (int) $timestamp;
         });
         update_option('cus_scheduled_homepage_changes', $scheduled_changes);
         

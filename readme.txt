@@ -87,7 +87,10 @@ These hooks are useful for triggering custom notifications, cache clearing, anal
 == Changelog ==
 
 = 4.0.2 =
+* feat: Add overdue event recovery
+* fix: Capability checks with proper fallbacks when post type object is unavailable
 * fix: Enhanced meta cleanup to prevent schedule timestamp inheritance
+* fix: Improve scheduled homepage changes reliability and backwards compatibility
 
 = 4.0.1 =
 * fix: Namespace issue
