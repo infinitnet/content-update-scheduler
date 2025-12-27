@@ -6,7 +6,7 @@
  * Description: Schedule content updates for any page or post type.
  * Author: Infinitnet
  * Author URI: https://infinitnet.io/
- * Version: 4.0.1
+ * Version: 4.0.2
  * License: GPLv3
  * Text Domain: content-update-scheduler
  *
@@ -16,7 +16,7 @@
 defined('ABSPATH') || exit;
 
 if (!defined('CUS_VERSION')) {
-    define('CUS_VERSION', '4.0.1');
+    define('CUS_VERSION', '4.0.2');
 }
 if (!defined('CUS_PLUGIN_FILE')) {
     define('CUS_PLUGIN_FILE', __FILE__);
