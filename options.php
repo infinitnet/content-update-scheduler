@@ -6,6 +6,8 @@
  * @package cus
  */
 
+defined('ABSPATH') || exit;
+
 /**
  * CUS Schedule Update options class
  */
@@ -38,7 +40,7 @@ class ContentUpdateScheduler_Options
         add_settings_section(
             'tsu_section',
             '',
-            'intval',
+            '__return_false',
             'tsu'
         );
 

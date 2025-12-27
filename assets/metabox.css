@@ -1,0 +1,17 @@
+.block-editor-publish-date-time-picker .components-datetime__date,
+.block-editor-publish-date-time-picker .components-datetime__time {
+	display: flex;
+	align-items: center;
+	margin-bottom: 1em;
+}
+
+.block-editor-publish-date-time-picker select,
+.block-editor-publish-date-time-picker input[type='number'],
+.block-editor-publish-date-time-picker input[type='time'] {
+	margin-right: 0.5em;
+}
+
+.block-editor-publish-date-time-picker input[type='number'] {
+	width: 5em;
+}
+

@@ -1,0 +1,167 @@
+(function ($) {
+	'use strict';
+
+	function initMetabox(config) {
+		if (!config || !config.metaname) {
+			return;
+		}
+
+		var metaname = config.metaname;
+		var wpTimezoneOffset = Number(config.timezoneOffsetHours || 0); // Hours from UTC.
+		var wpTimezoneString = String(config.timezoneString || '');
+
+		function fieldId(suffix) {
+			return '#' + metaname + '_' + suffix;
+		}
+
+		function checkDate() {
+			// Hide all messages first.
+			$('#pastmsg, #invalidmsg, #successmsg').hide();
+
+			var month = $(fieldId('month')).val();
+			var day = $(fieldId('day')).val();
+			var year = $(fieldId('year')).val();
+			var time = $(fieldId('time')).val();
+
+			if (typeof time === 'string') {
+				time = time.trim();
+			}
+
+			// Validate inputs.
+			if (!month || !day || !year || !time) {
+				$('#invalidmsg').show();
+				return false;
+			}
+
+			// Validate time format (HH:mm).
+			var timePattern = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
+			if (!timePattern.test(time)) {
+				$('#invalidmsg').show();
+				return false;
+			}
+
+			// Validate ranges.
+			var monthInt = parseInt(month, 10);
+			var dayInt = parseInt(day, 10);
+			var yearInt = parseInt(year, 10);
+			var currentYear = new Date().getFullYear();
+
+			if (monthInt < 1 || monthInt > 12) {
+				$('#invalidmsg').show();
+				return false;
+			}
+
+			if (dayInt < 1 || dayInt > 31) {
+				$('#invalidmsg').show();
+				return false;
+			}
+
+			if (yearInt < currentYear || yearInt > currentYear + 10) {
+				$('#invalidmsg').show();
+				return false;
+			}
+
+			// Check if it's a valid date (catches Feb 30, etc.).
+			var testDate = new Date(yearInt, monthInt - 1, dayInt);
+			if (
+				testDate.getMonth() !== monthInt - 1 ||
+				testDate.getDate() !== dayInt ||
+				testDate.getFullYear() !== yearInt
+			) {
+				$('#invalidmsg').show();
+				return false;
+			}
+
+			// Create the full datetime.
+			var timeParts = time.split(':');
+			if (timeParts.length !== 2) {
+				$('#invalidmsg').show();
+				return false;
+			}
+
+			// Create dates (JavaScript interprets as browser's local timezone).
+			var selectedDate = new Date(
+				yearInt,
+				monthInt - 1,
+				dayInt,
+				parseInt(timeParts[0], 10),
+				parseInt(timeParts[1], 10)
+			);
+
+			var now = new Date();
+
+			// Convert user input from browser timezone to WordPress timezone.
+			// selectedDate was created in browser TZ, but needs to represent WordPress TZ.
+			var browserOffset = -selectedDate.getTimezoneOffset() / 60; // Browser's UTC offset in hours.
+			var timezoneShift = browserOffset - wpTimezoneOffset; // Hours to shift from browser to WordPress timezone.
+			selectedDate.setHours(selectedDate.getHours() + timezoneShift);
+
+			if (Number.isNaN(selectedDate.getTime())) {
+				$('#invalidmsg').show();
+				return false;
+			}
+
+			if (selectedDate <= now) {
+				$('#pastmsg').show();
+				return false;
+			}
+
+			$('#successmsg').show();
+			return true;
+		}
+
+		function updateCurrentTime() {
+			var now = new Date();
+			// Convert UTC time to WordPress timezone.
+			var wpTime = new Date(now.getTime() + wpTimezoneOffset * 60 * 60 * 1000);
+
+			var options = {
+				year: 'numeric',
+				month: 'long',
+				day: 'numeric',
+				hour: '2-digit',
+				minute: '2-digit',
+				hour12: false,
+				timeZone: 'UTC', // Display in UTC to avoid browser conversion.
+			};
+
+			var timeStr = wpTime.toLocaleDateString('en-US', options);
+			if (wpTimezoneString) {
+				timeStr += ' ' + wpTimezoneString;
+			}
+
+			$('#current-wordpress-time').text(timeStr);
+		}
+
+		$(fieldId('month') + ', ' + fieldId('day') + ', ' + fieldId('year') + ', ' + fieldId('time')).on(
+			'change',
+			checkDate
+		);
+
+		checkDate(); // Initial check.
+
+		// Update immediately and then every minute.
+		updateCurrentTime();
+		setInterval(updateCurrentTime, 60000);
+
+		// Prevent form submission if date validation fails.
+		$('form#post').on('submit', function (e) {
+			if (checkDate()) {
+				return;
+			}
+
+			e.preventDefault();
+			$('html, body').animate(
+				{
+					scrollTop: $('#validation-messages').offset().top - 100,
+				},
+				500
+			);
+		});
+	}
+
+	$(function () {
+		initMetabox(window.ContentUpdateSchedulerMetabox || null);
+	});
+})(jQuery);
+
