@@ -28,23 +28,6 @@ if (!defined('CUS_PLUGIN_DIR')) {
 require_once CUS_PLUGIN_DIR . '/options.php';
 require_once CUS_PLUGIN_DIR . '/includes/class-content-update-scheduler.php';
 
-add_action('admin_enqueue_scripts', function () {
-    if (!function_exists('get_current_screen')) {
-        return;
-    }
-    $screen = get_current_screen();
-    if (!$screen || $screen->base !== 'post') {
-        return;
-    }
-
-    wp_enqueue_style(
-        'content-update-scheduler-metabox',
-        plugins_url('assets/metabox.css', CUS_PLUGIN_FILE),
-        array(),
-        defined('CUS_VERSION') ? CUS_VERSION : null
-    );
-});
-
 add_action('save_post', array('ContentUpdateScheduler', 'save_meta'), 10, 2);
 add_action('cus_publish_post', array('ContentUpdateScheduler', 'cron_publish_post'), 1);
 
@@ -87,15 +70,142 @@ add_filter('cron_schedules', function ($schedules) {
 // Hook for checking overdue posts.
 add_action('cus_check_overdue_posts', array('ContentUpdateScheduler', 'check_and_publish_overdue_posts'));
 
+register_activation_hook(__FILE__, 'cus_activation');
 register_deactivation_hook(__FILE__, 'cus_deactivation');
 
+/**
+ * Remove all cron events for a given hook (any args).
+ *
+ * @param string $hook Cron hook name.
+ * @return void
+ */
+function cus_cron_remove_all_events($hook)
+{
+    if (!function_exists('_get_cron_array') || !function_exists('_set_cron_array')) {
+        return;
+    }
+
+    $crons = _get_cron_array();
+    if (!is_array($crons)) {
+        return;
+    }
+
+    foreach ($crons as $timestamp => $cronhooks) {
+        if (!isset($cronhooks[$hook])) {
+            continue;
+        }
+
+        unset($crons[$timestamp][$hook]);
+        if (empty($crons[$timestamp])) {
+            unset($crons[$timestamp]);
+        }
+    }
+
+    _set_cron_array($crons);
+}
+
+/**
+ * Check whether a single event exists at a given timestamp for hook+args.
+ *
+ * @param string $hook Cron hook name.
+ * @param int    $timestamp UTC timestamp.
+ * @param array  $args Args array.
+ * @return bool
+ */
+function cus_cron_single_event_exists($hook, $timestamp, $args)
+{
+    if (!function_exists('_get_cron_array')) {
+        return false;
+    }
+
+    $timestamp = (int) $timestamp;
+    $crons = _get_cron_array();
+    if (!is_array($crons) || !isset($crons[$timestamp][$hook]) || !is_array($crons[$timestamp][$hook])) {
+        return false;
+    }
+
+    foreach ($crons[$timestamp][$hook] as $event) {
+        $event_args = isset($event['args']) ? $event['args'] : array();
+        if ($event_args == $args) { // phpcs:ignore WordPress.PHP.StrictComparisons.LooseComparison
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
+ * Activation: ensure recurring cron is scheduled and restore any pending single events.
+ *
+ * @return void
+ */
+function cus_activation()
+{
+    // Ensure overdue checker is scheduled (custom interval is registered by this plugin).
+    if (!wp_next_scheduled('cus_check_overdue_posts')) {
+        wp_schedule_event(time(), 'five_minutes', 'cus_check_overdue_posts');
+    }
+
+    // Restore scheduled update publish events based on stored post meta.
+    $scheduled_update_ids = get_posts(
+        array(
+            'post_type'      => 'any',
+            'post_status'    => 'cus_sc_publish',
+            'posts_per_page' => -1,
+            'fields'         => 'ids',
+            'no_found_rows'  => true,
+        )
+    );
+
+    $now = time();
+    foreach ($scheduled_update_ids as $post_id) {
+        $post_id = (int) $post_id;
+        $stamp = (int) get_post_meta($post_id, 'cus_sc_publish_pubdate', true);
+        if ($stamp <= $now) {
+            continue;
+        }
+
+        $args = array($post_id);
+        if (cus_cron_single_event_exists('cus_publish_post', $stamp, $args)) {
+            continue;
+        }
+        wp_schedule_single_event($stamp, 'cus_publish_post', $args);
+    }
+
+    // Restore scheduled homepage change events from stored option.
+    $scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
+    if (is_array($scheduled_changes)) {
+        foreach ($scheduled_changes as $change) {
+            if (!is_array($change)) {
+                continue;
+            }
+
+            $timestamp = isset($change['timestamp']) ? (int) $change['timestamp'] : 0;
+            $page_id = isset($change['page_id']) ? (int) $change['page_id'] : 0;
+
+            if ($timestamp <= $now || $page_id <= 0) {
+                continue;
+            }
+
+            $args = array($page_id);
+            if (cus_cron_single_event_exists('cus_change_homepage', $timestamp, $args)) {
+                continue;
+            }
+            wp_schedule_single_event($timestamp, 'cus_change_homepage', $args);
+        }
+    }
+}
+
+/**
+ * Deactivation: stop plugin execution without deleting data.
+ *
+ * @return void
+ */
 function cus_deactivation()
 {
-    global $wpdb;
-    $wpdb->query("DELETE FROM $wpdb->postmeta WHERE meta_key = 'cus_sc_publish_pubdate'");
     wp_clear_scheduled_hook('cus_check_overdue_posts');
 
-    // Clear scheduled homepage changes.
-    wp_clear_scheduled_hook('cus_change_homepage');
-    delete_option('cus_scheduled_homepage_changes');
+    // Remove plugin-owned single events. Data remains, and activation restores future events.
+    cus_cron_remove_all_events('cus_publish_post');
+    cus_cron_remove_all_events('cus_change_homepage');
 }

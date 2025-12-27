@@ -100,20 +100,15 @@
 
 			var now = new Date();
 
-			// Convert user input from browser timezone to WordPress timezone.
-			// selectedDate was created in browser TZ, but needs to represent WordPress TZ.
-			var browserOffset = -selectedDate.getTimezoneOffset() / 60; // Browser's UTC offset in hours.
-			var timezoneShift = browserOffset - wpTimezoneOffset; // Hours to shift from browser to WordPress timezone.
-			selectedDate.setHours(selectedDate.getHours() + timezoneShift);
-
 			if (Number.isNaN(selectedDate.getTime())) {
 				$('#invalidmsg').show();
 				return false;
 			}
 
+			// Don't block saving for past dates: server-side will normalize to +5 minutes.
 			if (selectedDate <= now) {
 				$('#pastmsg').show();
-				return false;
+				return true;
 			}
 
 			$('#successmsg').show();
@@ -135,7 +130,7 @@
 				timeZone: 'UTC', // Display in UTC to avoid browser conversion.
 			};
 
-			var timeStr = wpTime.toLocaleDateString('en-US', options);
+			var timeStr = wpTime.toLocaleString('en-US', options);
 			if (wpTimezoneString) {
 				timeStr += ' ' + wpTimezoneString;
 			}

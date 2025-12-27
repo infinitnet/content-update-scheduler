@@ -829,6 +829,12 @@ class ContentUpdateScheduler
         });
 
         wp_enqueue_style('wp-admin');
+        wp_enqueue_style(
+            'content-update-scheduler-metabox',
+            plugins_url('assets/metabox.css', CUS_PLUGIN_FILE),
+            array(),
+            defined('CUS_VERSION') ? CUS_VERSION : null
+        );
 
         add_meta_box('meta_' . self::$_cus_publish_status, self::$_cus_publish_metabox, array( 'ContentUpdateScheduler', 'create_meta_box' ), $post_type, 'side');
     }
@@ -1388,6 +1394,12 @@ class ContentUpdateScheduler
                     $stamp = $date_time->getTimestamp();
                 } catch (Exception $e) {
                     return $post_id; // Error creating timestamp
+                }
+
+                // If a past timestamp is selected, schedule for 5 minutes from now (UTC).
+                $now = time();
+                if ($stamp <= $now) {
+                    $stamp = $now + 300;
                 }
 
                 wp_clear_scheduled_hook('cus_publish_post', array($post_id));
