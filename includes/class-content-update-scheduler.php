@@ -1897,16 +1897,9 @@ class ContentUpdateScheduler
             return;
         }
 
-        // Set the post author as the current user to ensure permissions are correct
-        $current_user = get_current_user_id();
-        wp_set_current_user($post->post_author);
-
         kses_remove_filters();
-        $result = self::publish_post($ID);
+        self::publish_post($ID);
         kses_init_filters();
-
-        // Restore the original user
-        wp_set_current_user($current_user);
     }
 
     /**
