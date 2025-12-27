@@ -14,14 +14,24 @@
 			return '#' + metaname + '_' + suffix;
 		}
 
+		var $monthField = $(fieldId('month'));
+		var $dayField = $(fieldId('day'));
+		var $yearField = $(fieldId('year'));
+		var $timeField = $(fieldId('time'));
+
+		// Defensive: only activate validation if the metabox fields exist.
+		if (!$monthField.length || !$dayField.length || !$yearField.length || !$timeField.length) {
+			return;
+		}
+
 		function checkDate() {
 			// Hide all messages first.
 			$('#pastmsg, #invalidmsg, #successmsg').hide();
 
-			var month = $(fieldId('month')).val();
-			var day = $(fieldId('day')).val();
-			var year = $(fieldId('year')).val();
-			var time = $(fieldId('time')).val();
+			var month = $monthField.val();
+			var day = $dayField.val();
+			var year = $yearField.val();
+			var time = $timeField.val();
 
 			if (typeof time === 'string') {
 				time = time.trim();
@@ -151,12 +161,15 @@
 			}
 
 			e.preventDefault();
-			$('html, body').animate(
-				{
-					scrollTop: $('#validation-messages').offset().top - 100,
-				},
-				500
-			);
+			var $messages = $('#validation-messages');
+			if ($messages.length) {
+				$('html, body').animate(
+					{
+						scrollTop: $messages.offset().top - 100,
+					},
+					500
+				);
+			}
 		});
 	}
 
@@ -164,4 +177,3 @@
 		initMetabox(window.ContentUpdateSchedulerMetabox || null);
 	});
 })(jQuery);
-

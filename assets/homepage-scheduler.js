@@ -6,27 +6,53 @@
 	}
 
 	function scheduleHomepageChange() {
+		if (typeof ajaxurl !== 'string' || !ajaxurl) {
+			alert('Error: AJAX endpoint missing.');
+			return;
+		}
+
+		var nonce = $('[name="homepage_nonce"]').val();
+		if (!nonce) {
+			alert('Error: Security token missing. Please reload the page.');
+			return;
+		}
+
 		var formData = {
 			action: 'schedule_homepage_change',
 			page_id: $('#new_homepage').val(),
 			schedule_date: $('#schedule_date').val(),
 			schedule_time: $('#schedule_time').val(),
-			homepage_nonce: $('[name="homepage_nonce"]').val(),
+			homepage_nonce: nonce,
 		};
 
-		$.post(ajaxurl, formData, function (response) {
-			if (response && response.success) {
-				location.reload();
-				return;
-			}
-			var message = response && response.data ? response.data : 'Unknown error';
-			alert('Error: ' + message);
-		});
+		$.post(ajaxurl, formData)
+			.done(function (response) {
+				if (response && response.success) {
+					location.reload();
+					return;
+				}
+				var message = response && response.data ? response.data : 'Unknown error';
+				alert('Error: ' + message);
+			})
+			.fail(function () {
+				alert('Error: Request failed. Please check your connection and try again.');
+			});
 	}
 
 	function cancelHomepageChange($button) {
 		var config = getConfig();
 		var promptText = config.confirmCancel || 'Are you sure?';
+
+		if (typeof ajaxurl !== 'string' || !ajaxurl) {
+			alert('Error: AJAX endpoint missing.');
+			return;
+		}
+
+		var nonce = $('[name="homepage_nonce"]').val();
+		if (!nonce) {
+			alert('Error: Security token missing. Please reload the page.');
+			return;
+		}
 
 		if (!confirm(promptText)) {
 			return;
@@ -36,17 +62,21 @@
 			action: 'cancel_homepage_change',
 			timestamp: $button.data('timestamp'),
 			page_id: $button.data('page-id'),
-			homepage_nonce: $('[name="homepage_nonce"]').val(),
+			homepage_nonce: nonce,
 		};
 
-		$.post(ajaxurl, formData, function (response) {
-			if (response && response.success) {
-				location.reload();
-				return;
-			}
-			var message = response && response.data ? response.data : 'Unknown error';
-			alert('Error: ' + message);
-		});
+		$.post(ajaxurl, formData)
+			.done(function (response) {
+				if (response && response.success) {
+					location.reload();
+					return;
+				}
+				var message = response && response.data ? response.data : 'Unknown error';
+				alert('Error: ' + message);
+			})
+			.fail(function () {
+				alert('Error: Request failed. Please check your connection and try again.');
+			});
 	}
 
 	$(function () {
@@ -61,4 +91,3 @@
 		});
 	});
 })(jQuery);
-
