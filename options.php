@@ -153,13 +153,12 @@ class ContentUpdateScheduler_Options
     private static function render_checkbox_field($args, $label)
     {
         $options = get_option('tsu_options');
-        $checked = isset($options[$args['label_for']]) ? 'checked="checked"' : '';
         ?>
         <label for="<?php echo esc_attr($args['label_for']); ?>">
             <input id="<?php echo esc_attr($args['label_for']); ?>"
                    type="checkbox"
                    name="tsu_options[<?php echo esc_attr($args['label_for']); ?>]"
-                   <?php echo $checked; // WPCS: XSS okay. ?>
+                   <?php checked(isset($options[$args['label_for']])); ?>
             >
             <?php echo esc_html($label); ?>
         </label>

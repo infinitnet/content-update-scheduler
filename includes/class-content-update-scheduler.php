@@ -191,7 +191,7 @@ class ContentUpdateScheduler
             $element_type = 'post_' . $post_type;
 
             // Get source language details
-            $source_details = apply_filters('wpml_element_language_details', null, array(
+            $source_details = apply_filters('wpml_element_language_details', null, array( // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
                 'element_id' => $source_id,
                 'element_type' => $element_type
             ));
@@ -217,10 +217,10 @@ class ContentUpdateScheduler
             );
 
             // Set language details
-            do_action('wpml_set_element_language_details', array(
+            do_action('wpml_set_element_language_details', array( // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
                 'element_id' => $destination_id,
                 'element_type' => $element_type,
-                'trid' => $create_new_group ? null : apply_filters('wpml_element_trid', null, $source_id, $element_type),
+                'trid' => $create_new_group ? null : apply_filters('wpml_element_trid', null, $source_id, $element_type), // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
                 'language_code' => $source_details->language_code,
                 'source_language_code' => $source_details->source_language_code
             ));
@@ -261,7 +261,7 @@ class ContentUpdateScheduler
 
     private static function copy_oxygen_data($source_id, $destination_id) {
         // Early exit if Oxygen isn't active
-        if (!in_array('oxygen/functions.php', apply_filters('active_plugins', get_option('active_plugins')))) {
+        if (!in_array('oxygen/functions.php', apply_filters('active_plugins', get_option('active_plugins')))) { // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
             return false;
         }
 
@@ -271,11 +271,6 @@ class ContentUpdateScheduler
                          get_post_field('post_name', $source_id) . '-' . $source_id . '.css';
             $dest_css = $upload_dir['basedir'] . '/oxygen/css/' . 
                        get_post_field('post_name', $destination_id) . '-' . $destination_id . '.css';
-
-            // Create destination file if it doesn't exist
-            if (!file_exists($dest_css)) {
-                @touch($dest_css);
-            }
 
             // Copy CSS if source exists
             if (file_exists($source_css)) {
@@ -357,7 +352,7 @@ class ContentUpdateScheduler
                 
                 if (!empty($update_data)) {
                     global $wpdb;
-                    $wpdb->update(
+                    $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                         $wpdb->posts,
                         $update_data,
                         array('ID' => $new_variation_id),
@@ -433,9 +428,8 @@ class ContentUpdateScheduler
     public static function init()
     {
         
-        self::load_plugin_textdomain();
-        self::$cus_publish_label   = __('Content Update Scheduler', self::TEXT_DOMAIN);
-        self::$_cus_publish_metabox = __('Content Update Scheduler', self::TEXT_DOMAIN);
+        self::$cus_publish_label    = __('Content Update Scheduler', 'content-update-scheduler');
+        self::$_cus_publish_metabox = __('Content Update Scheduler', 'content-update-scheduler');
         self::register_post_status();
 
         // Get all public post types plus 'product' (maintaining existing behavior)
@@ -482,18 +476,6 @@ class ContentUpdateScheduler
     }
 
     /**
-     * Wrapper for wp's own load_plugin_textdomain.
-     *
-     * @access private
-     *
-     * @return void
-     */
-    private static function load_plugin_textdomain()
-    {
-        load_plugin_textdomain(self::TEXT_DOMAIN, false, dirname(plugin_basename(CUS_PLUGIN_FILE)) . '/language/');
-    }
-
-    /**
      * Retreives all currently registered posttypes.
      *
      * @access private
@@ -516,15 +498,21 @@ class ContentUpdateScheduler
      */
     public static function load_pubdate()
     {
-        if (isset($_REQUEST['postid'])) { // WPCS: CSRF okay.
-            $stamp = get_post_meta(absint(wp_unslash($_REQUEST['postid'])), self::$_cus_publish_status . '_pubdate', true); // WPCS: CSRF okay.
-            if ($stamp) {
-                $str  = '<div style="margin-left:20px">';
-                $str .= self::get_pubdate($stamp);
-                $str .= '</div>';
-                die($str); // WPCS: XSS okay.
-            }
+        if (!current_user_can('edit_posts')) {
+            wp_die('', '', array('response' => 403));
         }
+
+        if (!isset($_REQUEST['postid'])) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+            wp_die('', '', array('response' => 400));
+        }
+
+        $stamp = get_post_meta(absint(wp_unslash($_REQUEST['postid'])), self::$_cus_publish_status . '_pubdate', true); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+        if (!$stamp) {
+            wp_die('');
+        }
+
+        // Keep legacy behavior: return a small HTML snippet for admin-ajax consumers.
+        wp_die('<div style="margin-left:20px">' . esc_html(self::get_pubdate($stamp)) . '</div>');
     }
 
     /**
@@ -546,7 +534,7 @@ class ContentUpdateScheduler
         $exclude_from_search = ! is_admin();
 
         $args = array(
-            'label'                     => _x('Content Update Scheduler', 'Status General Name', self::TEXT_DOMAIN),
+            'label'                     => _x('Content Update Scheduler', 'Status General Name', 'content-update-scheduler'),
             'public'                    => $public,
             'internal'                  => true,
             'publicly_queryable'        => true,
@@ -555,7 +543,7 @@ class ContentUpdateScheduler
             'show_in_admin_all_list'    => true,
             'show_in_admin_status_list' => true,
             // translators: number of posts.
-            'label_count'               => _n_noop('Content Update Scheduler <span class="count">(%s)</span>', 'Content Update Scheduler <span class="count">(%s)</span>', self::TEXT_DOMAIN),
+            'label_count'               => _n_noop('Content Update Scheduler <span class="count">(%s)</span>', 'Content Update Scheduler <span class="count">(%s)</span>', 'content-update-scheduler'),
         );
 
         register_post_status(self::$_cus_publish_status, $args);
@@ -606,12 +594,12 @@ class ContentUpdateScheduler
             $states = array( self::$cus_publish_label );
             if (! $type->hierarchical) {
                 $orig_id = (int) get_post_meta($post->ID, self::$_cus_publish_status . '_original', true);
-                $orig = $orig_id ? get_post($orig_id) : null;
-                if ($orig instanceof WP_Post) {
-                    array_push($states, __('Original', self::TEXT_DOMAIN) . ': ' . $orig->post_title);
-                }
-            }
-        }
+	                $orig = $orig_id ? get_post($orig_id) : null;
+	                if ($orig instanceof WP_Post) {
+	                    array_push($states, __('Original', 'content-update-scheduler') . ': ' . $orig->post_title);
+	                }
+	            }
+	        }
 
         return $states;
     }
@@ -645,13 +633,13 @@ class ContentUpdateScheduler
             $post_type_object = get_post_type_object($post->post_type);
             $publish_cap = ($post_type_object && isset($post_type_object->cap->publish_posts)) ? $post_type_object->cap->publish_posts : 'publish_posts';
 
-            if (current_user_can($publish_cap)) {
-                $actions['publish_now'] = '<a href="' . esc_url($publish_now_url) . '">' . __('Publish Now', self::TEXT_DOMAIN) . '</a>';
-            }
+	            if (current_user_can($publish_cap)) {
+	                $actions['publish_now'] = '<a href="' . esc_url($publish_now_url) . '">' . __('Publish Now', 'content-update-scheduler') . '</a>';
+	            }
             $actions['copy_to_publish'] = '<a href="' . esc_url($copy_url) . '">' . self::$cus_publish_label . '</a>';
-            if (ContentUpdateScheduler_Options::get('tsu_recursive')) {
-                $actions['copy_to_publish'] = '<a href="' . esc_url($copy_url) . '">' . __('Schedule recursive', self::TEXT_DOMAIN) . '</a>';
-            }
+	            if (ContentUpdateScheduler_Options::get('tsu_recursive')) {
+	                $actions['copy_to_publish'] = '<a href="' . esc_url($copy_url) . '">' . __('Schedule recursive', 'content-update-scheduler') . '</a>';
+	            }
         } elseif ('trash' !== $post->post_status) {
             $actions['copy_to_publish'] = '<a href="' . esc_url($copy_url) . '">' . self::$cus_publish_label . '</a>';
         }
@@ -672,8 +660,8 @@ class ContentUpdateScheduler
         foreach ($columns as $key => $val) {
             $new[ $key ] = $val;
             if ('title' === $key) {
-                $new['cus_publish'] = esc_html__('Republication Date', self::TEXT_DOMAIN);
-            }
+	                $new['cus_publish'] = esc_html__('Republication Date', 'content-update-scheduler');
+	            }
         }
         return $new;
     }
@@ -828,7 +816,7 @@ class ContentUpdateScheduler
             if (!current_user_can('edit_post', $post_id)) {
                 \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
                     'error',
-                    __('You do not have permission to edit this content.', self::TEXT_DOMAIN)
+                    __('You do not have permission to edit this content.', 'content-update-scheduler')
                 );
                 wp_safe_redirect(wp_get_referer() ? wp_get_referer() : admin_url('edit.php'));
                 exit;
@@ -838,7 +826,7 @@ class ContentUpdateScheduler
             if (!$post) {
                 \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
                     'error',
-                    __('Post not found.', self::TEXT_DOMAIN)
+                    __('Post not found.', 'content-update-scheduler')
                 );
                 wp_safe_redirect(wp_get_referer() ? wp_get_referer() : admin_url('edit.php'));
                 exit;
@@ -848,7 +836,7 @@ class ContentUpdateScheduler
             if (!is_wp_error($publishing_id) && $publishing_id) {
                 \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
                     'success',
-                    __('Scheduled update created.', self::TEXT_DOMAIN)
+                    __('Scheduled update created.', 'content-update-scheduler')
                 );
                 wp_safe_redirect(admin_url('post.php?action=edit&post=' . absint($publishing_id)));
                 exit;
@@ -857,13 +845,14 @@ class ContentUpdateScheduler
             if (is_wp_error($publishing_id)) {
                 $error_message = $publishing_id->get_error_message();
             } else {
-                $error_message = __('Unable to create scheduled update.', self::TEXT_DOMAIN);
+                $error_message = __('Unable to create scheduled update.', 'content-update-scheduler');
             }
 
             // translators: %s: error message.
             \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
                 'error',
-                sprintf(__('Content scheduling failed: %s', self::TEXT_DOMAIN), $error_message)
+                // translators: %s: error message.
+                sprintf(__('Content scheduling failed: %s', 'content-update-scheduler'), $error_message)
             );
             wp_safe_redirect(admin_url('edit.php?post_type=' . $post->post_type));
             exit;
@@ -889,7 +878,7 @@ class ContentUpdateScheduler
             if (!$post) {
                 \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
                     'error',
-                    __('Post not found.', self::TEXT_DOMAIN)
+                    __('Post not found.', 'content-update-scheduler')
                 );
                 wp_safe_redirect(wp_get_referer() ? wp_get_referer() : admin_url('edit.php'));
                 exit;
@@ -902,7 +891,7 @@ class ContentUpdateScheduler
             if (!current_user_can($publish_cap)) {
                 \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
                     'error',
-                    __('You do not have permission to publish content.', self::TEXT_DOMAIN)
+                    __('You do not have permission to publish content.', 'content-update-scheduler')
                 );
                 wp_safe_redirect(wp_get_referer() ? wp_get_referer() : admin_url('edit.php'));
                 exit;
@@ -913,7 +902,8 @@ class ContentUpdateScheduler
                 // translators: %s: error message.
                 \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
                     'error',
-                    sprintf(__('Publishing failed: %s', self::TEXT_DOMAIN), $result->get_error_message())
+                    // translators: %s: error message.
+                    sprintf(__('Publishing failed: %s', 'content-update-scheduler'), $result->get_error_message())
                 );
                 wp_safe_redirect(admin_url('edit.php?post_type=' . $post->post_type));
                 exit;
@@ -921,7 +911,7 @@ class ContentUpdateScheduler
 
             \Infinitnet\ContentUpdateScheduler\Support\AdminNotices::add(
                 'success',
-                __('Scheduled update published.', self::TEXT_DOMAIN)
+                __('Scheduled update published.', 'content-update-scheduler')
             );
             wp_safe_redirect(admin_url('edit.php?post_type=' . $post->post_type));
             exit;
@@ -1009,77 +999,75 @@ class ContentUpdateScheduler
             'before'
         );
 
-        ?>
-        <div class="block-editor-publish-date-time-picker">
-            <p>
-                <strong><?php esc_html_e('Republication Date', self::TEXT_DOMAIN); ?></strong>
-            </p>
-            <p class="description">
-                <?php esc_html_e('This schedules an UPDATE to existing content. The original post remains published with its current date.', self::TEXT_DOMAIN); ?>
-            </p>
-            <div class="components-datetime">
-                <div class="components-datetime__date">
-                    <select name="<?php echo esc_attr($metaname); ?>_month" id="<?php echo esc_attr($metaname); ?>_month">
-                        <?php
-                        $months = array(
-                            'January', 'February', 'March', 'April', 'May', 'June',
-                            'July', 'August', 'September', 'October', 'November', 'December'
-                        );
-                        foreach ($months as $index => $month_name) {
-                            $month_number = $index + 1;
-                            $selected = ($month_number == intval($month)) ? 'selected' : '';
-                            echo '<option value="' . esc_attr($month_number) . '" ' . $selected . '>' . esc_html__($month_name, self::TEXT_DOMAIN) . '</option>';
-                        }
-                        ?>
-                    </select>
-                    <input type="number" name="<?php echo esc_attr($metaname); ?>_day" id="<?php echo esc_attr($metaname); ?>_day" min="1" max="31" value="<?php echo esc_attr($day); ?>" />
-                    <input type="number" name="<?php echo esc_attr($metaname); ?>_year" id="<?php echo esc_attr($metaname); ?>_year" min="<?php echo esc_attr(wp_date('Y')); ?>" value="<?php echo esc_attr($year); ?>" />
-                </div>
+	        ?>
+	        <div class="block-editor-publish-date-time-picker">
+	            <p>
+	                <strong><?php esc_html_e('Republication Date', 'content-update-scheduler'); ?></strong>
+	            </p>
+	            <p class="description">
+	                <?php esc_html_e('This schedules an UPDATE to existing content. The original post remains published with its current date.', 'content-update-scheduler'); ?>
+	            </p>
+	            <div class="components-datetime">
+	                <div class="components-datetime__date">
+	                    <select name="<?php echo esc_attr($metaname); ?>_month" id="<?php echo esc_attr($metaname); ?>_month">
+	                        <?php
+	                        global $wp_locale;
+	                        for ($month_number = 1; $month_number <= 12; $month_number++) {
+	                            $month_label = ($wp_locale && method_exists($wp_locale, 'get_month'))
+	                                ? $wp_locale->get_month($month_number)
+	                                : wp_date('F', mktime(0, 0, 0, $month_number, 1));
+	                            echo '<option value="' . esc_attr($month_number) . '"' . selected($month_number, (int) $month, false) . '>' . esc_html($month_label) . '</option>';
+	                        }
+	                        ?>
+	                    </select>
+	                    <input type="number" name="<?php echo esc_attr($metaname); ?>_day" id="<?php echo esc_attr($metaname); ?>_day" min="1" max="31" value="<?php echo esc_attr($day); ?>" />
+	                    <input type="number" name="<?php echo esc_attr($metaname); ?>_year" id="<?php echo esc_attr($metaname); ?>_year" min="<?php echo esc_attr(wp_date('Y')); ?>" value="<?php echo esc_attr($year); ?>" />
+	                </div>
                 <div class="components-datetime__time">
                     <input type="time" name="<?php echo esc_attr($metaname); ?>_time" id="<?php echo esc_attr($metaname); ?>_time" value="<?php echo esc_attr($time); ?>" />
                 </div>
-            </div>
-            <p>
-                <?php esc_html_e('Please enter time in your site\'s configured timezone', self::TEXT_DOMAIN); ?>
-            </p>
-            <p class="description" style="margin-bottom: 1em;">
-                <strong><?php esc_html_e('Current WordPress time:', self::TEXT_DOMAIN); ?></strong>
-                <span id="current-wordpress-time"><?php echo esc_html(wp_date('F j, Y H:i T')); ?></span>
-                <small style="display: block; margin-top: 0.25em; opacity: 0.7;">
-                    <?php esc_html_e('Enter times in your site\'s configured timezone shown above.', self::TEXT_DOMAIN); ?>
-                </small>
-            </p>
-            <div id="validation-messages">
-                <div id="pastmsg" class="notice notice-warning inline" style="display:none;">
-                    <p>
-                        <?php
-                        echo esc_html__('The release date is in the past.', self::TEXT_DOMAIN);
-                        echo esc_html__(' This post will be published 5 minutes from now.', self::TEXT_DOMAIN);
-                        ?>
-                    </p>
-                </div>
-                <div id="invalidmsg" class="notice notice-error inline" style="display:none;">
-                    <p><?php esc_html_e('Please enter a valid date and time.', self::TEXT_DOMAIN); ?></p>
-                </div>
-                <div id="successmsg" class="notice notice-success inline" style="display:none;">
-                    <p><?php esc_html_e('Valid scheduling date selected.', self::TEXT_DOMAIN); ?></p>
-                </div>
-            </div>
-            <div class="misc-pub-section">
-                <label>
+	            </div>
+	            <p>
+	                <?php esc_html_e('Please enter time in your site\'s configured timezone', 'content-update-scheduler'); ?>
+	            </p>
+	            <p class="description" style="margin-bottom: 1em;">
+	                <strong><?php esc_html_e('Current WordPress time:', 'content-update-scheduler'); ?></strong>
+	                <span id="current-wordpress-time"><?php echo esc_html(wp_date('F j, Y H:i T')); ?></span>
+	                <small style="display: block; margin-top: 0.25em; opacity: 0.7;">
+	                    <?php esc_html_e('Enter times in your site\'s configured timezone shown above.', 'content-update-scheduler'); ?>
+	                </small>
+	            </p>
+	            <div id="validation-messages">
+	                <div id="pastmsg" class="notice notice-warning inline" style="display:none;">
+	                    <p>
+	                        <?php
+	                        echo esc_html__('The release date is in the past.', 'content-update-scheduler');
+	                        echo esc_html__(' This post will be published 5 minutes from now.', 'content-update-scheduler');
+	                        ?>
+	                    </p>
+	                </div>
+	                <div id="invalidmsg" class="notice notice-error inline" style="display:none;">
+	                    <p><?php esc_html_e('Please enter a valid date and time.', 'content-update-scheduler'); ?></p>
+	                </div>
+	                <div id="successmsg" class="notice notice-success inline" style="display:none;">
+	                    <p><?php esc_html_e('Valid scheduling date selected.', 'content-update-scheduler'); ?></p>
+	                </div>
+	            </div>
+	            <div class="misc-pub-section">
+	                <label>
                     <input type="checkbox" 
                            name="<?php echo esc_attr(self::$_cus_publish_status); ?>_keep_dates" 
-                           id="<?php echo esc_attr(self::$_cus_publish_status); ?>_keep_dates"
-                           <?php checked(get_post_meta($post->ID, self::$_cus_publish_status . '_keep_dates', true), 'yes'); ?>>
-                    <?php esc_html_e('Keep original publication date', self::TEXT_DOMAIN); ?>
-                </label>
-                <p class="description">
-                    <?php esc_html_e('If checked, the original publication date will be preserved when this update is published.', self::TEXT_DOMAIN); ?>
-                </p>
-            </div>
-        </div>
-        <?php
-    }
+	                           id="<?php echo esc_attr(self::$_cus_publish_status); ?>_keep_dates"
+	                           <?php checked(get_post_meta($post->ID, self::$_cus_publish_status . '_keep_dates', true), 'yes'); ?>>
+	                    <?php esc_html_e('Keep original publication date', 'content-update-scheduler'); ?>
+	                </label>
+	                <p class="description">
+	                    <?php esc_html_e('If checked, the original publication date will be preserved when this update is published.', 'content-update-scheduler'); ?>
+	                </p>
+	            </div>
+	        </div>
+	        <?php
+	    }
 
     /**
      * Gets the currently set timezone..
@@ -1201,7 +1189,7 @@ class ContentUpdateScheduler
                 
                 if (!empty($update_data)) {
                     global $wpdb;
-                    $wpdb->update(
+                    $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                         $wpdb->posts,
                         $update_data,
                         array('ID' => $result),
@@ -1307,7 +1295,7 @@ class ContentUpdateScheduler
             
             // Update content/excerpt directly to bypass filters that might corrupt it
             global $wpdb;
-            $wpdb->update(
+            $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                 $wpdb->posts,
                 $update_data,
                 array('ID' => $new_post_id),
@@ -1511,7 +1499,7 @@ class ContentUpdateScheduler
                 $month = intval($_POST[$pub . '_month']);
                 $day = intval($_POST[$pub . '_day']);
                 $year = intval($_POST[$pub . '_year']);
-                $time = sanitize_text_field($_POST[$pub . '_time']);
+                $time = sanitize_text_field(wp_unslash($_POST[$pub . '_time']));
 
                 // Convert form data to timestamp using WordPress timezone
                 $date_string = sprintf('%04d-%02d-%02d %s', $year, $month, $day, $time);
@@ -1640,7 +1628,7 @@ class ContentUpdateScheduler
                 $post_type = get_post_type($orig_id);
                 if ($post_type) {
                     $element_type = 'post_' . $post_type;
-                    $details = apply_filters('wpml_element_language_details', null, array(
+                    $details = apply_filters('wpml_element_language_details', null, array( // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
                         'element_id'   => $orig_id,
                         'element_type' => $element_type,
                     ));
@@ -1648,7 +1636,7 @@ class ContentUpdateScheduler
                     if ($details) {
                         $wpml_language_before = array(
                             'element_type'         => $element_type,
-                            'trid'                 => apply_filters('wpml_element_trid', null, $orig_id, $element_type),
+                            'trid'                 => apply_filters('wpml_element_trid', null, $orig_id, $element_type), // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
                             'language_code'        => isset($details->language_code) ? $details->language_code : null,
                             'source_language_code' => isset($details->source_language_code) ? $details->source_language_code : null,
                         );
@@ -1728,7 +1716,7 @@ class ContentUpdateScheduler
 
                 // Restore WPML language details if available.
                 if (defined('ICL_SITEPRESS_VERSION') && is_array($wpml_language_before) && !empty($wpml_language_before['element_type'])) {
-                    do_action('wpml_set_element_language_details', array(
+                    do_action('wpml_set_element_language_details', array( // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
                         'element_id'           => $orig_id,
                         'element_type'         => $wpml_language_before['element_type'],
                         'trid'                 => $wpml_language_before['trid'],
@@ -1746,7 +1734,9 @@ class ContentUpdateScheduler
                     if (!empty($snapshot['exists'])) {
                         @file_put_contents($path, (string) $snapshot['content']);
                     } elseif (file_exists($path)) {
-                        @unlink($path);
+                        if (function_exists('wp_delete_file')) {
+                            wp_delete_file($path);
+                        }
                     }
                 }
 
@@ -1849,7 +1839,7 @@ class ContentUpdateScheduler
 
                     if (!empty($update_data)) {
                         global $wpdb;
-                        $wpdb->update(
+                        $wpdb->update( // phpcs:ignore WordPress.DB.DirectDatabaseQuery.DirectQuery
                             $wpdb->posts,
                             $update_data,
                             array('ID' => $result),
@@ -1930,19 +1920,19 @@ class ContentUpdateScheduler
      */
     public static function get_pubdate($stamp)
     {
-        // Validate timestamp
-        if (empty($stamp) || !is_numeric($stamp) || $stamp <= 0) {
-            return __('Invalid date', self::TEXT_DOMAIN);
-        }
+	        // Validate timestamp
+	        if (empty($stamp) || !is_numeric($stamp) || $stamp <= 0) {
+	            return __('Invalid date', 'content-update-scheduler');
+	        }
         
         try {
             $date = new DateTime('@' . $stamp);
             $date->setTimezone(wp_timezone());
             return $date->format(get_option('date_format') . ' ' . get_option('time_format'));
-        } catch (Exception $e) {
-            return __('Invalid date', self::TEXT_DOMAIN);
-        }
-    }
+	        } catch (Exception $e) {
+	            return __('Invalid date', 'content-update-scheduler');
+	        }
+	    }
 
     /* bhullar custom code */
     public static function override_static_front_page_and_post_option($html, $arg)
@@ -1989,14 +1979,14 @@ class ContentUpdateScheduler
 
             $output = "<select name='" . esc_attr($parsed_args['name']) . "'" . $class . " id='" . esc_attr($parsed_args['id']) . "'>\n";
             if ($parsed_args['show_option_no_change']) {
-                $output .= "\t<option value=\"-1\">" . $parsed_args['show_option_no_change'] . "</option>\n";
+                    $output .= "\t<option value=\"-1\">" . esc_html($parsed_args['show_option_no_change']) . "</option>\n";
+                }
+                if ($parsed_args['show_option_none']) {
+                    $output .= "\t<option value=\"" . esc_attr($parsed_args['option_none_value']) . '">' . esc_html($parsed_args['show_option_none']) . "</option>\n";
+                }
+                $output .= walk_page_dropdown_tree($pages, $parsed_args['depth'], $parsed_args);
+                $output .= "</select>\n";
             }
-            if ($parsed_args['show_option_none']) {
-                $output .= "\t<option value=\"" . esc_attr($parsed_args['option_none_value']) . '">' . $parsed_args['show_option_none'] . "</option>\n";
-            }
-            $output .= walk_page_dropdown_tree($pages, $parsed_args['depth'], $parsed_args);
-            $output .= "</select>\n";
-        }
 
         /**
          * Filters the HTML output of a list of pages as a drop down.
@@ -2008,10 +1998,23 @@ class ContentUpdateScheduler
          * @param array  $parsed_args The parsed arguments array.
          * @param array  $pages       List of WP_Post objects returned by `get_pages()`
          */
-        $html = apply_filters('co_wp_dropdown_pages', $output, $parsed_args, $pages);
+        $html = apply_filters('content_update_scheduler_wp_dropdown_pages', $output, $parsed_args, $pages);
+        // Back-compat: legacy filter name.
+        $html = apply_filters('co_wp_dropdown_pages', $html, $parsed_args, $pages); // phpcs:ignore WordPress.NamingConventions.PrefixAllGlobals.NonPrefixedHooknameFound
 
         if ($parsed_args['echo']) {
-            echo $html;
+            echo wp_kses($html, array(
+                'select' => array(
+                    'name'  => true,
+                    'id'    => true,
+                    'class' => true,
+                ),
+                'option' => array(
+                    'value'    => true,
+                    'selected' => true,
+                    'class'    => true,
+                ),
+            ));
         }
         return $html;
     }
@@ -2053,29 +2056,33 @@ class ContentUpdateScheduler
     }
 
     public static function check_and_publish_overdue_posts() {
-        global $wpdb;
-
-        // Get current UTC timestamp for comparison with stored UTC timestamps
+        // Stored timestamps are UTC seconds.
         $current_timestamp = time();
 
+        $query = new WP_Query(array(
+            'post_type'              => 'any',
+            'post_status'            => self::$_cus_publish_status,
+            'posts_per_page'         => 50,
+            'fields'                 => 'ids',
+            'no_found_rows'          => true,
+            'update_post_meta_cache' => false,
+            'update_post_term_cache' => false,
+            'meta_query'             => array(
+                array(
+                    'key'     => self::$_cus_publish_status . '_pubdate',
+                    'value'   => (int) $current_timestamp,
+                    'compare' => '<=',
+                    'type'    => 'NUMERIC',
+                ),
+            ),
+        ));
 
-        $overdue_posts = $wpdb->get_results(
-            $wpdb->prepare(
-                "SELECT pm.post_id, pm.meta_value 
-                FROM {$wpdb->postmeta} pm 
-                INNER JOIN {$wpdb->posts} p ON pm.post_id = p.ID 
-                WHERE pm.meta_key = %s 
-                AND p.post_status = %s 
-                AND pm.meta_value <= %d",
-                self::$_cus_publish_status . '_pubdate',
-                self::$_cus_publish_status,
-                $current_timestamp
-            )
-        );
+        if (empty($query->posts) || !is_array($query->posts)) {
+            return;
+        }
 
-        foreach ($overdue_posts as $post) {
-            // Post is already confirmed overdue by the query
-            self::cron_publish_post($post->post_id);
+        foreach ($query->posts as $post_id) {
+            self::cron_publish_post((int) $post_id);
         }
     }
 
@@ -2097,8 +2104,8 @@ class ContentUpdateScheduler
     public static function add_homepage_scheduling_page() {
         add_submenu_page(
             'options-general.php',
-            __('Schedule Homepage Changes', self::TEXT_DOMAIN),
-            __('Schedule Homepage', self::TEXT_DOMAIN),
+            __('Schedule Homepage Changes', 'content-update-scheduler'),
+            __('Schedule Homepage', 'content-update-scheduler'),
             'manage_options',
             'schedule-homepage',
             array(__CLASS__, 'homepage_scheduling_page')
@@ -2125,13 +2132,13 @@ class ContentUpdateScheduler
             $homepage_script_handle,
             'window.ContentUpdateSchedulerHomepageScheduler = ' . wp_json_encode(
                 array(
-                    'confirmCancel'        => __('Are you sure you want to cancel this scheduled homepage change?', self::TEXT_DOMAIN),
-                    'errorMissingAjaxUrl'  => __('AJAX endpoint missing.', self::TEXT_DOMAIN),
-                    'errorMissingNonce'    => __('Security token missing. Please reload the page.', self::TEXT_DOMAIN),
-                    'errorRequestFailed'   => __('Request failed. Please check your connection and try again.', self::TEXT_DOMAIN),
-                    'errorUnknown'         => __('Unknown error', self::TEXT_DOMAIN),
-                    'scheduledSuccess'     => __('Homepage change scheduled.', self::TEXT_DOMAIN),
-                    'canceledSuccess'      => __('Homepage change canceled.', self::TEXT_DOMAIN),
+                    'confirmCancel'        => __('Are you sure you want to cancel this scheduled homepage change?', 'content-update-scheduler'),
+                    'errorMissingAjaxUrl'  => __('AJAX endpoint missing.', 'content-update-scheduler'),
+                    'errorMissingNonce'    => __('Security token missing. Please reload the page.', 'content-update-scheduler'),
+                    'errorRequestFailed'   => __('Request failed. Please check your connection and try again.', 'content-update-scheduler'),
+                    'errorUnknown'         => __('Unknown error', 'content-update-scheduler'),
+                    'scheduledSuccess'     => __('Homepage change scheduled.', 'content-update-scheduler'),
+                    'canceledSuccess'      => __('Homepage change canceled.', 'content-update-scheduler'),
                 )
             ) . ';',
             'before'
@@ -2152,23 +2159,23 @@ class ContentUpdateScheduler
             <div id="cus-homepage-notices"></div>
             
             <div class="card">
-                <h2><?php esc_html_e('Schedule New Homepage Change', self::TEXT_DOMAIN); ?></h2>
+                <h2><?php esc_html_e('Schedule New Homepage Change', 'content-update-scheduler'); ?></h2>
                 <form id="schedule-homepage-form">
                     <?php wp_nonce_field('schedule_homepage_change', 'homepage_nonce'); ?>
                     
                     <table class="form-table">
                         <tr>
                             <th scope="row">
-                                <label for="new_homepage"><?php esc_html_e('New Homepage', self::TEXT_DOMAIN); ?></label>
+                                <label for="new_homepage"><?php esc_html_e('New Homepage', 'content-update-scheduler'); ?></label>
                             </th>
                             <td>
                                 <select name="new_homepage" id="new_homepage" required>
-                                    <option value=""><?php esc_html_e('Select a page...', self::TEXT_DOMAIN); ?></option>
+                                    <option value=""><?php esc_html_e('Select a page...', 'content-update-scheduler'); ?></option>
                                     <?php foreach ($pages as $page): ?>
                                         <option value="<?php echo esc_attr($page->ID); ?>">
                                             <?php echo esc_html($page->post_title); ?>
                                             <?php if ($page->post_status === 'cus_sc_publish'): ?>
-                                                (<?php esc_html_e('Scheduled Update', self::TEXT_DOMAIN); ?>)
+                                                (<?php esc_html_e('Scheduled Update', 'content-update-scheduler'); ?>)
                                             <?php endif; ?>
                                         </option>
                                     <?php endforeach; ?>
@@ -2177,18 +2184,18 @@ class ContentUpdateScheduler
                         </tr>
                         <tr>
                             <th scope="row">
-                                <label for="schedule_date"><?php esc_html_e('Schedule Date', self::TEXT_DOMAIN); ?></label>
+                                <label for="schedule_date"><?php esc_html_e('Schedule Date', 'content-update-scheduler'); ?></label>
                             </th>
                             <td>
                                 <input type="date" name="schedule_date" id="schedule_date" required>
                                 <input type="time" name="schedule_time" id="schedule_time" required>
-                                <p class="description"><?php esc_html_e('Date and time when the homepage should change', self::TEXT_DOMAIN); ?></p>
+                                <p class="description"><?php esc_html_e('Date and time when the homepage should change', 'content-update-scheduler'); ?></p>
                             </td>
                         </tr>
                     </table>
                     
                     <p class="submit">
-                        <button type="submit" class="button button-primary"><?php esc_html_e('Schedule Homepage Change', self::TEXT_DOMAIN); ?></button>
+                        <button type="submit" class="button button-primary"><?php esc_html_e('Schedule Homepage Change', 'content-update-scheduler'); ?></button>
                         <span class="spinner" style="float:none;"></span>
                     </p>
                 </form>
@@ -2196,13 +2203,13 @@ class ContentUpdateScheduler
 
             <?php if (!empty($scheduled_changes)): ?>
             <div class="card">
-                <h2><?php esc_html_e('Scheduled Homepage Changes', self::TEXT_DOMAIN); ?></h2>
+                <h2><?php esc_html_e('Scheduled Homepage Changes', 'content-update-scheduler'); ?></h2>
                 <table class="wp-list-table widefat fixed striped">
                     <thead>
                         <tr>
-                            <th><?php esc_html_e('New Homepage', self::TEXT_DOMAIN); ?></th>
-                            <th><?php esc_html_e('Scheduled Date', self::TEXT_DOMAIN); ?></th>
-                            <th><?php esc_html_e('Actions', self::TEXT_DOMAIN); ?></th>
+                            <th><?php esc_html_e('New Homepage', 'content-update-scheduler'); ?></th>
+                            <th><?php esc_html_e('Scheduled Date', 'content-update-scheduler'); ?></th>
+                            <th><?php esc_html_e('Actions', 'content-update-scheduler'); ?></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2211,13 +2218,13 @@ class ContentUpdateScheduler
                             <td><?php echo esc_html(get_the_title($change['page_id'])); ?></td>
                             <td><?php echo esc_html(self::get_pubdate($change['timestamp'])); ?></td>
                             <td>
-                                <a href="#" class="button button-small cancel-homepage-change" 
-                                   data-timestamp="<?php echo esc_attr($change['timestamp']); ?>"
-                                   data-page-id="<?php echo esc_attr($change['page_id']); ?>">
-                                    <?php esc_html_e('Cancel', self::TEXT_DOMAIN); ?>
-                                </a>
-                            </td>
-                        </tr>
+	                                <a href="#" class="button button-small cancel-homepage-change" 
+	                                   data-timestamp="<?php echo esc_attr($change['timestamp']); ?>"
+	                                   data-page-id="<?php echo esc_attr($change['page_id']); ?>">
+	                                    <?php esc_html_e('Cancel', 'content-update-scheduler'); ?>
+	                                </a>
+	                            </td>
+	                        </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
@@ -2395,8 +2402,8 @@ class ContentUpdateScheduler
     public static function add_republications_status_page() {
         add_submenu_page(
             'tools.php',
-            __('Scheduled Republications', self::TEXT_DOMAIN),
-            __('Scheduled Republications', self::TEXT_DOMAIN),
+            __('Scheduled Republications', 'content-update-scheduler'),
+            __('Scheduled Republications', 'content-update-scheduler'),
             'manage_options',
             'scheduled-republications',
             array(__CLASS__, 'republications_status_page')

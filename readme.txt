@@ -91,13 +91,14 @@ These hooks are useful for triggering custom notifications, cache clearing, anal
 * fix: Capability checks with proper fallbacks when post type object is unavailable
 * fix: Enhanced meta cleanup to prevent schedule timestamp inheritance
 * fix: Improve scheduled homepage changes reliability and backwards compatibility
+* fix: Plugin Check errors resolved
 
 = 4.0.1 =
 * fix: Namespace issue
 * fix: Scheduled Republications table display
 
 = 4.0.0 =
-* refactor: Refactored entire codebase
+* refactor: Refactored and modernized entire codebase
 
 = 3.1.5 =
 * fix: Correct date selection offset calculation

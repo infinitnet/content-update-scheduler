@@ -28,7 +28,7 @@ if (function_exists('register_post_status')) {
  * @param string $hook Cron hook name.
  * @return void
  */
-function cus_uninstall_remove_all_cron_events($hook)
+function content_update_scheduler_uninstall_remove_all_cron_events($hook)
 {
     if (!function_exists('_get_cron_array') || !function_exists('_set_cron_array')) {
         return;
@@ -55,19 +55,23 @@ function cus_uninstall_remove_all_cron_events($hook)
 
 // Unschedule cron hooks owned by this plugin.
 wp_clear_scheduled_hook('cus_check_overdue_posts');
-cus_uninstall_remove_all_cron_events('cus_publish_post');
-cus_uninstall_remove_all_cron_events('cus_change_homepage');
+content_update_scheduler_uninstall_remove_all_cron_events('cus_publish_post');
+content_update_scheduler_uninstall_remove_all_cron_events('cus_change_homepage');
 
 // Clear homepage change events based on stored option.
-$scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
-if (is_array($scheduled_changes)) {
-    foreach ($scheduled_changes as $change) {
-        if (!is_array($change)) {
+$content_update_scheduler_scheduled_changes = get_option('cus_scheduled_homepage_changes', array());
+if (is_array($content_update_scheduler_scheduled_changes)) {
+    foreach ($content_update_scheduler_scheduled_changes as $content_update_scheduler_change) {
+        if (!is_array($content_update_scheduler_change)) {
             continue;
         }
-        $page_id = isset($change['page_id']) ? (int) $change['page_id'] : 0;
-        if ($page_id > 0) {
-            wp_clear_scheduled_hook('cus_change_homepage', array($page_id));
+        $content_update_scheduler_page_id = isset($content_update_scheduler_change['page_id']) ? (int) $content_update_scheduler_change['page_id'] : 0;
+        $content_update_scheduler_timestamp = isset($content_update_scheduler_change['timestamp']) ? (int) $content_update_scheduler_change['timestamp'] : 0;
+        if ($content_update_scheduler_page_id > 0) {
+            wp_clear_scheduled_hook('cus_change_homepage', array($content_update_scheduler_page_id));
+            if ($content_update_scheduler_timestamp > 0) {
+                wp_clear_scheduled_hook('cus_change_homepage', array($content_update_scheduler_page_id, $content_update_scheduler_timestamp));
+            }
         }
     }
 }
@@ -77,18 +81,18 @@ delete_option('tsu_options');
 delete_option('cus_scheduled_homepage_changes');
 
 // Remove post meta keys used by this plugin.
-$meta_keys = array(
+$content_update_scheduler_meta_keys = array(
     'cus_sc_publish_pubdate',
     'cus_sc_publish_original',
     'cus_sc_publish_keep_dates',
 );
 
-foreach ($meta_keys as $meta_key) {
-    delete_post_meta_by_key($meta_key);
+foreach ($content_update_scheduler_meta_keys as $content_update_scheduler_meta_key) {
+    delete_post_meta_by_key($content_update_scheduler_meta_key);
 }
 
 // Delete scheduled update posts created by this plugin.
-$scheduled_update_ids = get_posts(
+$content_update_scheduler_scheduled_update_ids = get_posts(
     array(
         'post_type'      => 'any',
         'post_status'    => 'cus_sc_publish',
@@ -98,7 +102,7 @@ $scheduled_update_ids = get_posts(
     )
 );
 
-foreach ($scheduled_update_ids as $post_id) {
-    wp_clear_scheduled_hook('cus_publish_post', array((int) $post_id));
-    wp_delete_post((int) $post_id, true);
+foreach ($content_update_scheduler_scheduled_update_ids as $content_update_scheduler_post_id) {
+    wp_clear_scheduled_hook('cus_publish_post', array((int) $content_update_scheduler_post_id));
+    wp_delete_post((int) $content_update_scheduler_post_id, true);
 }
