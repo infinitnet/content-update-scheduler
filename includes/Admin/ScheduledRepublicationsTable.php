@@ -73,8 +73,21 @@ final class ScheduledRepublicationsTable extends \WP_List_Table
 
         $query = new \WP_Query($args);
 
+        // If the user is on an out-of-range page (e.g. `paged=2` when only 1 page exists),
+        // WP_Query will return no posts but `found_posts` will remain non-zero.
+        if (empty($query->posts) && $query->found_posts > 0 && $paged > 1 && $query->max_num_pages > 0) {
+            $args['paged'] = 1;
+            $query = new \WP_Query($args);
+        }
+
         $this->items_posts = is_array($query->posts) ? $query->posts : array();
         $this->items = $this->items_posts;
+
+        $columns = $this->get_columns();
+        $hidden = get_hidden_columns($this->screen);
+        $sortable = $this->get_sortable_columns();
+        $primary = $this->get_primary_column_name();
+        $this->_column_headers = array($columns, $hidden, $sortable, $primary);
 
         $this->set_pagination_args(array(
             'total_items' => (int) $query->found_posts,
@@ -85,10 +98,46 @@ final class ScheduledRepublicationsTable extends \WP_List_Table
 
     /**
      * @param \WP_Post $item
+     * @return string
+     */
+    public function column_original($item)
+    {
+        return $this->render_original_column($item);
+    }
+
+    /**
+     * @param \WP_Post $item
+     * @return string
+     */
+    public function column_scheduled($item)
+    {
+        return $this->render_scheduled_column($item);
+    }
+
+    /**
+     * @param \WP_Post $item
+     * @return string
+     */
+    public function column_status($item)
+    {
+        return $this->render_status_column($item);
+    }
+
+    /**
+     * @param \WP_Post $item
+     * @return string
+     */
+    public function column_actions($item)
+    {
+        return $this->render_actions_column($item);
+    }
+
+    /**
+     * @param \WP_Post $item
      * @param string  $column_name
      * @return string
      */
-    protected function column_default($item, $column_name)
+    public function column_default($item, $column_name)
     {
         switch ($column_name) {
             case 'original':
@@ -102,6 +151,14 @@ final class ScheduledRepublicationsTable extends \WP_List_Table
             default:
                 return '';
         }
+    }
+
+    /**
+     * @return string
+     */
+    protected function get_primary_column_name()
+    {
+        return 'original';
     }
 
     /**
@@ -175,4 +232,3 @@ final class ScheduledRepublicationsTable extends \WP_List_Table
         return $html;
     }
 }
-
