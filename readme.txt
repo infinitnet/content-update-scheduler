@@ -2,8 +2,8 @@
 Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 6.0
-Tested up to: 6.9
-Stable tag: 4.0.2
+Tested up to: 7.0
+Stable tag: 4.0.3
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -85,6 +85,10 @@ add_action('ContentUpdateScheduler\\after_publish_post', function($post, $orig) 
 These hooks are useful for triggering custom notifications, cache clearing, analytics tracking, or any other post-publication tasks.
 
 == Changelog ==
+
+= 4.0.3 =
+* fix: Harden plugin bootstrap so incomplete packages report missing files without activation fatals
+* compat: Declare WordPress 7.0 compatibility
 
 = 4.0.2 =
 * feat: Add overdue event recovery

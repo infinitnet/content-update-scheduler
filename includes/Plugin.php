@@ -48,7 +48,10 @@ final class Plugin
         // Hook for checking overdue posts.
         add_action('cus_check_overdue_posts', array('ContentUpdateScheduler', 'check_and_publish_overdue_posts'));
 
-        // Homepage scheduling functionality (admin only).
+        // Homepage scheduling functionality.
+        \ContentUpdateScheduler::init_homepage_scheduling();
+
+        // Homepage scheduling admin filters.
         add_action('admin_init', array(__CLASS__, 'admin_init'));
     }
 
@@ -76,7 +79,6 @@ final class Plugin
         }
 
         add_filter('wp_dropdown_pages', array('ContentUpdateScheduler', 'override_static_front_page_and_post_option'), 1, 2);
-        \ContentUpdateScheduler::init_homepage_scheduling();
     }
 
     /**

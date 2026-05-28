@@ -400,3 +400,9 @@ FodyWeavers.xsd
 .DS_Store
 .env
 .serena/
+
+# Local wp-env / WordPress Playground runtime files
+.wp-env*.json
+.wp-env*.override.json
+.wp-env/
+.playwright-mcp/
