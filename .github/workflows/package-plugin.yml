@@ -1,0 +1,176 @@
+name: Package WordPress Plugin
+
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - content-update-scheduler.php
+      - options.php
+      - uninstall.php
+      - readme.txt
+      - README.md
+      - LICENSE
+      - assets/**
+      - images/**
+      - includes/**
+      - .github/workflows/package-plugin.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: plugin-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  package:
+    name: Build release zip
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Detect version update
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          plugin_file="content-update-scheduler.php"
+          current_version="$(grep -E '^[[:space:]]*\*[[:space:]]*Version:' "$plugin_file" | head -1 | sed -E 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*//')"
+          previous_version=""
+
+          if [[ -z "$current_version" ]]; then
+            echo "Could not find plugin Version header in ${plugin_file}" >&2
+            exit 1
+          fi
+
+          if git cat-file -e "${{ github.event.before }}:${plugin_file}" 2>/dev/null; then
+            previous_version="$(git show "${{ github.event.before }}:${plugin_file}" | grep -E '^[[:space:]]*\*[[:space:]]*Version:' | head -1 | sed -E 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*//' || true)"
+          fi
+
+          {
+            echo "current=$current_version"
+            echo "previous=$previous_version"
+          } >> "$GITHUB_OUTPUT"
+
+          if [[ "$current_version" != "$previous_version" ]]; then
+            echo "changed=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "changed=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Validate PHP syntax
+        if: steps.version.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            php -l "$file"
+          done < <(find . -path './.git' -prune -o -type f -name '*.php' -print0)
+
+      - name: Validate package file list
+        if: steps.version.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          required_files=(
+            content-update-scheduler.php
+            options.php
+            uninstall.php
+            readme.txt
+            README.md
+            LICENSE
+            includes/class-content-update-scheduler.php
+            includes/Plugin.php
+            includes/Admin/ScheduledRepublicationsPage.php
+            includes/Admin/ScheduledRepublicationsTable.php
+            includes/Support/AdminNotices.php
+            includes/Support/Cron.php
+            assets/admin.css
+            assets/homepage-scheduler.js
+            assets/metabox.css
+            assets/metabox.js
+          )
+
+          for file in "${required_files[@]}"; do
+            if [[ ! -f "$file" ]]; then
+              echo "Required package file is missing: $file" >&2
+              exit 1
+            fi
+          done
+
+      - name: Build plugin zip
+        id: package
+        if: steps.version.outputs.changed == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          plugin_slug="content-update-scheduler"
+          version="${{ steps.version.outputs.current }}"
+          zip_name="${plugin_slug}-${version}.zip"
+
+          mkdir -p dist
+          git archive \
+            --format=zip \
+            --prefix="${plugin_slug}/" \
+            --output="dist/${zip_name}" \
+            HEAD \
+            LICENSE \
+            README.md \
+            readme.txt \
+            content-update-scheduler.php \
+            options.php \
+            uninstall.php \
+            assets \
+            images \
+            includes
+
+          sha256sum "dist/${zip_name}" | tee "dist/${zip_name}.sha256"
+
+          {
+            echo "zip_path=dist/${zip_name}"
+            echo "checksum_path=dist/${zip_name}.sha256"
+            echo "tag_name=v${version}"
+            echo "release_name=Content Update Scheduler ${version}"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Upload workflow artifact
+        if: steps.version.outputs.changed == 'true'
+        uses: actions/upload-artifact@v7
+        with:
+          name: content-update-scheduler-${{ steps.version.outputs.current }}
+          path: |
+            ${{ steps.package.outputs.zip_path }}
+            ${{ steps.package.outputs.checksum_path }}
+          if-no-files-found: error
+
+      - name: Create or update GitHub release
+        if: steps.version.outputs.changed == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG_NAME: ${{ steps.package.outputs.tag_name }}
+          RELEASE_NAME: ${{ steps.package.outputs.release_name }}
+          ZIP_PATH: ${{ steps.package.outputs.zip_path }}
+          CHECKSUM_PATH: ${{ steps.package.outputs.checksum_path }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
+            gh release upload "$TAG_NAME" "$ZIP_PATH" "$CHECKSUM_PATH" --clobber
+          else
+            gh release create "$TAG_NAME" "$ZIP_PATH" "$CHECKSUM_PATH" \
+              --title "$RELEASE_NAME" \
+              --target "$GITHUB_SHA" \
+              --notes "Automated WordPress plugin package for ${RELEASE_NAME}."
+          fi
+
+      - name: Report unchanged version
+        if: steps.version.outputs.changed != 'true'
+        run: echo "Plugin version did not change; no release package was created."
