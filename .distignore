@@ -1,0 +1,25 @@
+# Files that must never be copied into the WordPress.org plugin package.
+# The deploy workflow builds from an allowlist. This file is the second gate
+# if a later change points the deploy action at the repository root.
+/.git
+/.github
+/.gitignore
+/.gitattributes
+/.distignore
+/.graphifyignore
+/graphify-out
+/.hermes
+/.omo
+/.codex
+/AGENTS.md
+/tests
+/scripts
+/node_modules
+/vendor
+/dist
+*.zip
+.DS_Store
+.wp-env.json
+.wp-env.playground.json
+.wp-env/
+.playwright-mcp/

@@ -1,0 +1,194 @@
+name: Deploy to WordPress.org
+
+# Publishes to https://wordpress.org/plugins/content-update-scheduler/
+# when a push to master (or main) raises the plugin version.
+# This repository's release branch is master. main is included so a later
+# rename does not stop releases.
+#
+# Required repository secrets, same pair as infinitnet/rapidurlindexer-wp:
+#   SVN_USERNAME  WordPress.org username
+#   SVN_PASSWORD  WordPress.org password
+# A version bump must change all three of these together:
+#   content-update-scheduler.php Version header
+#   CUS_VERSION
+#   readme.txt Stable tag
+
+on:
+  push:
+    branches:
+      - master
+      - main
+
+permissions:
+  contents: read
+
+concurrency:
+  group: wporg-deploy-content-update-scheduler
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Publish clean plugin package on version bump
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v6.0.3
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Detect synchronized version bump
+        id: version
+        shell: bash
+        env:
+          GITHUB_EVENT_BEFORE: ${{ github.event.before }}
+        run: python3 scripts/wporg-version-gate.py
+
+      - name: Set up Node.js
+        if: steps.version.outputs.publish == 'true'
+        uses: actions/setup-node@v6.4.0
+        with:
+          node-version: 24
+
+      - name: Elementor revision copy regression
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          npx --yes @wp-playground/cli@3.1.55 run-blueprint \
+            --verbosity=quiet \
+            --php=8.3 \
+            --wp=latest \
+            --blueprint=tests/elementor-revision-blueprint.json \
+            --mount=.:/wordpress/wp-content/plugins/content-update-scheduler \
+            --mount=./tests:/wordpress/wp-content/cus-repro
+
+      - name: Validate PHP syntax
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          while IFS= read -r -d '' file; do
+            php -l "$file"
+          done < <(find . -path './.git' -prune -o -type f -name '*.php' -print0)
+
+      - name: Build clean plugin package
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -rf dist
+          mkdir -p dist/content-update-scheduler
+          git archive --format=tar HEAD \
+            LICENSE \
+            README.md \
+            readme.txt \
+            content-update-scheduler.php \
+            options.php \
+            uninstall.php \
+            assets \
+            images \
+            includes \
+            | tar -x -C dist/content-update-scheduler
+
+      - name: Verify package contents
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          package_dir="dist/content-update-scheduler"
+          version="${{ steps.version.outputs.version }}"
+          test -f "$package_dir/content-update-scheduler.php"
+          test -f "$package_dir/readme.txt"
+          test -f "$package_dir/includes/class-content-update-scheduler.php"
+          test -d "$package_dir/assets"
+          test -d "$package_dir/includes"
+          grep -q "Version: ${version}" "$package_dir/content-update-scheduler.php"
+          grep -q "define('CUS_VERSION', '${version}');" "$package_dir/content-update-scheduler.php"
+          grep -q "Stable tag: ${version}" "$package_dir/readme.txt"
+
+          forbidden=(
+            .distignore
+            .gitignore
+            .git
+            .github
+            tests
+            scripts
+            graphify-out
+            .hermes
+            AGENTS.md
+            node_modules
+            vendor
+          )
+          for path in "${forbidden[@]}"; do
+            if [ -e "$package_dir/$path" ]; then
+              echo "Forbidden release artifact found: $path" >&2
+              exit 1
+            fi
+          done
+
+      - name: Require WordPress.org credentials
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        env:
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SVN_USERNAME}" ] || [ -z "${SVN_PASSWORD}" ]; then
+            echo "WordPress.org deploy needs repository secrets SVN_USERNAME and SVN_PASSWORD." >&2
+            echo "Add them at https://github.com/infinitnet/content-update-scheduler/settings/secrets/actions" >&2
+            echo "Use the same WordPress.org username and password already stored on infinitnet/rapidurlindexer-wp." >&2
+            exit 1
+          fi
+
+      - name: Install Subversion
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! command -v svn >/dev/null 2>&1; then
+            sudo apt-get update -y
+            sudo apt-get install -y subversion
+          fi
+          svn --version --quiet
+
+      - name: Check WordPress.org tag
+        if: steps.version.outputs.publish == 'true'
+        id: wporg_tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          tag_url="https://plugins.svn.wordpress.org/content-update-scheduler/tags/${{ steps.version.outputs.version }}/"
+          if svn ls "$tag_url" >/dev/null 2>&1; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+            echo "WordPress.org tag already exists: $tag_url"
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+            echo "WordPress.org tag does not exist yet: $tag_url"
+          fi
+
+      - name: Deploy to WordPress.org
+        if: steps.version.outputs.publish == 'true' && steps.wporg_tag.outputs.already_published == 'false'
+        # Pinned to the same commit used by infinitnet/rapidurlindexer-wp. This step receives SVN credentials.
+        uses: 10up/action-wordpress-plugin-deploy@54bd289b8525fd23a5c365ec369185f2966529c2
+        env:
+          SLUG: content-update-scheduler
+          VERSION: ${{ steps.version.outputs.version }}
+          BUILD_DIR: dist/content-update-scheduler
+          ASSETS_DIR: .wordpress-org
+          SVN_USERNAME: ${{ secrets.SVN_USERNAME }}
+          SVN_PASSWORD: ${{ secrets.SVN_PASSWORD }}
+
+      - name: Report skipped deployment
+        if: steps.version.outputs.publish != 'true' || steps.wporg_tag.outputs.already_published == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.version.outputs.publish }}" != "true" ]; then
+            echo "Deployment skipped: version was not bumped."
+          else
+            echo "Deployment skipped: version ${{ steps.version.outputs.version }} is already published on WordPress.org."
+          fi
