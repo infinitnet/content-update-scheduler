@@ -2011,25 +2011,34 @@ class ContentUpdateScheduler
 
     public static function user_restriction_scheduled_content()
     {
-        global $post;
-
-        if (!$post instanceof WP_Post) {
+        if (is_admin()) {
             return;
         }
 
-        if (!current_user_can('administrator')) {
-            $cus_sc_publish_pubdate = get_post_meta($post->ID, 'cus_sc_publish_pubdate', true);
-            $original_post_id = get_post_meta($post->ID, self::$_cus_publish_status . '_original', true);
-            
-            // Check if the post is a scheduled update and its publication time has passed
-            if (!empty($cus_sc_publish_pubdate) && (int) $cus_sc_publish_pubdate > time() && empty($original_post_id)) {
-                global $wp_query;
-                $wp_query->set_404();
-                status_header(404);
-                get_template_part(404);
-                exit();
-            }
+        $post = get_queried_object();
+        if (!$post instanceof WP_Post || $post->post_status !== self::$_cus_publish_status) {
+            return;
         }
+
+        // The visibility option is the explicit opt-in for public scheduled copies.
+        if (ContentUpdateScheduler_Options::get('tsu_visible')) {
+            return;
+        }
+
+        if (is_user_logged_in() && current_user_can('edit_post', $post->ID)) {
+            return;
+        }
+
+        global $wp_query;
+        $wp_query->set_404();
+        status_header(404);
+        nocache_headers();
+
+        $template = get_query_template('404');
+        if ($template) {
+            include $template;
+        }
+        exit;
     }
 
     public static function check_scheduled_events() {

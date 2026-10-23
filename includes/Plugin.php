@@ -40,7 +40,7 @@ final class Plugin
         add_filter('manage_pages_columns', array('ContentUpdateScheduler', 'manage_pages_columns'));
         add_filter('page_attributes_dropdown_pages_args', array('ContentUpdateScheduler', 'parent_dropdown_status'));
 
-        add_filter('template_redirect', array('ContentUpdateScheduler', 'user_restriction_scheduled_content'), 1);
+        add_action('template_redirect', array('ContentUpdateScheduler', 'user_restriction_scheduled_content'), 1);
 
         // Add custom cron interval.
         add_filter('cron_schedules', array(__CLASS__, 'add_cron_schedules'));

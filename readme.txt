@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 6.0
 Tested up to: 7.0
-Stable tag: 4.0.4
+Stable tag: 4.0.5
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -85,6 +85,9 @@ add_action('ContentUpdateScheduler\\after_publish_post', function($post, $orig) 
 These hooks are useful for triggering custom notifications, cache clearing, analytics tracking, or any other post-publication tasks.
 
 == Changelog ==
+
+= 4.0.5 =
+* fix: Keep a scheduled revision private until it publishes. The front-end check treated the administrator role as a capability and ignored revisions that already pointed at the live page, so anyone with the URL could read the unpublished update. Editors who can edit the revision can still preview it. The Post Visibility setting still makes scheduled copies public.
 
 = 4.0.4 =
 * fix: Keep Elementor containers, sections, and widgets when creating a scheduled revision. The revision copy was saving Elementor document JSON without the slash WordPress metadata expects, so the editor imported the page into a single text widget.
