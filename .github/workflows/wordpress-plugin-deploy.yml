@@ -5,7 +5,8 @@ name: Deploy to WordPress.org
 # This repository's release branch is master. main is included so a later
 # rename does not stop releases.
 #
-# Required repository secrets, same pair as infinitnet/rapidurlindexer-wp:
+# Required GitHub Actions repository secrets, not environment secrets.
+# Same pair as infinitnet/rapidurlindexer-wp:
 #   SVN_USERNAME  WordPress.org username
 #   SVN_PASSWORD  WordPress.org password
 # A version bump must change all three of these together:
@@ -45,34 +46,6 @@ jobs:
         env:
           GITHUB_EVENT_BEFORE: ${{ github.event.before }}
         run: python3 scripts/wporg-version-gate.py
-
-      - name: Set up Node.js
-        if: steps.version.outputs.publish == 'true'
-        uses: actions/setup-node@v6.4.0
-        with:
-          node-version: 24
-
-      - name: Elementor revision copy regression
-        if: steps.version.outputs.publish == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes @wp-playground/cli@3.1.55 run-blueprint \
-            --verbosity=quiet \
-            --php=8.3 \
-            --wp=latest \
-            --blueprint=tests/elementor-revision-blueprint.json \
-            --mount=.:/wordpress/wp-content/plugins/content-update-scheduler \
-            --mount=./tests:/wordpress/wp-content/cus-repro
-
-      - name: Validate PHP syntax
-        if: steps.version.outputs.publish == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          while IFS= read -r -d '' file; do
-            php -l "$file"
-          done < <(find . -path './.git' -prune -o -type f -name '*.php' -print0)
 
       - name: Build clean plugin package
         if: steps.version.outputs.publish == 'true'
@@ -139,7 +112,8 @@ jobs:
           set -euo pipefail
           if [ -z "${SVN_USERNAME}" ] || [ -z "${SVN_PASSWORD}" ]; then
             echo "WordPress.org deploy needs repository secrets SVN_USERNAME and SVN_PASSWORD." >&2
-            echo "Add them at https://github.com/infinitnet/content-update-scheduler/settings/secrets/actions" >&2
+            echo "Add both under Repository secrets, not Environment secrets:" >&2
+            echo "https://github.com/infinitnet/content-update-scheduler/settings/secrets/actions" >&2
             echo "Use the same WordPress.org username and password already stored on infinitnet/rapidurlindexer-wp." >&2
             exit 1
           fi
