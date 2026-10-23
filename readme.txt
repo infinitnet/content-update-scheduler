@@ -3,7 +3,7 @@ Contributors: infinitnet
 Tags: schedule, scheduling, update, republish, publication
 Requires at least: 6.0
 Tested up to: 7.0
-Stable tag: 4.0.3
+Stable tag: 4.0.4
 Requires PHP: 7.4
 License: GPLv3
 License URI: https://www.gnu.org/licenses/gpl-3.0.en.html
@@ -85,6 +85,9 @@ add_action('ContentUpdateScheduler\\after_publish_post', function($post, $orig) 
 These hooks are useful for triggering custom notifications, cache clearing, analytics tracking, or any other post-publication tasks.
 
 == Changelog ==
+
+= 4.0.4 =
+* fix: Keep Elementor containers, sections, and widgets when creating a scheduled revision. The revision copy was saving Elementor document JSON without the slash WordPress metadata expects, so the editor imported the page into a single text widget.
 
 = 4.0.3 =
 * fix: Harden plugin bootstrap so incomplete packages report missing files without activation fatals

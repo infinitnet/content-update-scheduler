@@ -1,0 +1,13 @@
+{
+  "$schema": "https://playground.wordpress.net/blueprint-schema.json",
+  "steps": [
+    {
+      "step": "activatePlugin",
+      "pluginPath": "/wordpress/wp-content/plugins/content-update-scheduler/content-update-scheduler.php"
+    },
+    {
+      "step": "wp-cli",
+      "command": "wp eval-file /wordpress/wp-content/cus-repro/elementor-revision-copy.php"
+    }
+  ]
+}

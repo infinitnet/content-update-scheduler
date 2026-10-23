@@ -103,69 +103,66 @@ class ContentUpdateScheduler
     }
 
     /**
-     * Copies Elementor-specific data between posts
-     * 
-     * @param int $source_id Source post ID
-     * @param int $destination_id Destination post ID
-     * @return bool Success status
+     * Copies Elementor document meta between posts.
+     *
+     * update_metadata() unslashes its input. _elementor_data is a JSON string
+     * containing escaped quotes and backslashes. Saving that string without
+     * wp_slash() strips the escapes, json_decode() fails, and the Elementor
+     * editor imports post_content into a single text-editor widget.
+     *
+     * Copy every _elementor key, including when Elementor itself is inactive,
+     * so a later editor open still sees the original document.
+     *
+     * @param int $source_id      Source post ID.
+     * @param int $destination_id Destination post ID.
+     * @return bool Whether Elementor meta was found and copied.
      */
     private static function copy_elementor_data($source_id, $destination_id) {
-        // Early exit if Elementor isn't active
-        if (!defined('ELEMENTOR_VERSION')) {
+        $source_meta = get_post_meta($source_id);
+        if (!is_array($source_meta)) {
             return false;
         }
 
-        try {
-            // Core Elementor meta keys that must be preserved
-            $elementor_meta_keys = [
-                self::META_ELEMENTOR_DATA,
-                self::META_ELEMENTOR_EDIT_MODE,
-                self::META_ELEMENTOR_PAGE_SETTINGS,
-                self::META_ELEMENTOR_VERSION,
-                self::META_ELEMENTOR_TEMPLATE_TYPE,
-                self::META_ELEMENTOR_CONTROLS_USAGE,
-                '_elementor_css'
-            ];
-
-            // Get all meta at once for efficiency
-            $source_meta = get_post_meta($source_id);
-            
-            foreach ($elementor_meta_keys as $key) {
-                if (!isset($source_meta[$key][0])) {
-                    continue;
-                }
-
-                $value = $source_meta[$key][0];
-                
-                // Special handling for Elementor's JSON data
-                if ($key === self::META_ELEMENTOR_DATA) {
-                    // Validate JSON structure
-                    $decoded = json_decode($value);
-                    if (json_last_error() === JSON_ERROR_NONE) {
-                        // WordPress handles slashing automatically - do not use wp_slash()
-                        update_post_meta($destination_id, $key, $value);
-                    }
-                    continue;
-                }
-
-                // Copy other Elementor meta directly
-                update_post_meta($destination_id, $key, maybe_unserialize($value));
+        $copied = false;
+        foreach ($source_meta as $key => $values) {
+            if (!is_string($key) || strpos($key, '_elementor') !== 0 || !is_array($values)) {
+                continue;
             }
 
-            // Copy Elementor CSS file
-            $upload_dir = wp_upload_dir();
+            $copied = true;
+            delete_post_meta($destination_id, $key);
+            foreach ($values as $value) {
+                if ($key === self::META_ELEMENTOR_DATA) {
+                    if (is_array($value) || is_object($value)) {
+                        $value = wp_json_encode($value);
+                    }
+                    if (!is_string($value)) {
+                        continue;
+                    }
+                    // add_metadata() expects slashed input and calls wp_unslash().
+                    add_metadata('post', $destination_id, $key, wp_slash($value));
+                    continue;
+                }
+
+                add_metadata('post', $destination_id, $key, maybe_unserialize($value));
+            }
+        }
+
+        if (!$copied) {
+            return false;
+        }
+
+        $upload_dir = wp_upload_dir();
+        if (!empty($upload_dir['basedir'])) {
             $source_css = $upload_dir['basedir'] . '/elementor/css/post-' . $source_id . '.css';
             $dest_css = $upload_dir['basedir'] . '/elementor/css/post-' . $destination_id . '.css';
-            
-            if (file_exists($source_css)) {
-                @copy($source_css, $dest_css);
+            if (is_readable($source_css)) {
+                wp_mkdir_p(dirname($dest_css));
+                copy($source_css, $dest_css);
             }
-
-            return true;
-
-        } catch (Exception $e) {
-            return false;
         }
+
+        return true;
     }
 
     /**
