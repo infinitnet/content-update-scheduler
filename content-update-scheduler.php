@@ -6,7 +6,7 @@
  * Description: Schedule content updates for any page or post type.
  * Author: Infinitnet
  * Author URI: https://infinitnet.io/
- * Version: 4.0.5
+ * Version: 4.0.6
  * License: GPLv3
  * Text Domain: content-update-scheduler
  *
@@ -16,7 +16,7 @@
 defined('ABSPATH') || exit;
 
 if (!defined('CUS_VERSION')) {
-    define('CUS_VERSION', '4.0.5');
+    define('CUS_VERSION', '4.0.6');
 }
 if (!defined('CUS_PLUGIN_FILE')) {
     define('CUS_PLUGIN_FILE', __FILE__);
@@ -59,11 +59,7 @@ if (!function_exists('cus_bootstrap_report_missing_files')) {
                     return;
                 }
 
-                $escaped_message = function_exists('esc_html')
-                    ? esc_html($message)
-                    : htmlspecialchars($message, ENT_QUOTES, 'UTF-8');
-
-                echo '<div class="notice notice-error"><p>' . $escaped_message . '</p></div>';
+                echo '<div class="notice notice-error"><p>' . esc_html($message) . '</p></div>';
             });
 
             add_action('admin_init', function () {
@@ -83,7 +79,7 @@ if (!function_exists('cus_bootstrap_report_missing_files')) {
 
                 if (function_exists('wp_die')) {
                     wp_die(
-                        function_exists('esc_html') ? esc_html($message) : htmlspecialchars($message, ENT_QUOTES, 'UTF-8'),
+                        esc_html($message),
                         'Plugin activation failed',
                         array('response' => 200)
                     );
