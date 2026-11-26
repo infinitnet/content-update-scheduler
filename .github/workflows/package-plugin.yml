@@ -1,21 +1,23 @@
 name: Package WordPress Plugin
 
+# Builds the installable ZIP and publishes GitHub Release v<version> when the
+# plugin header version has no tag yet. No tests run here; test locally before
+# bumping the version. Version source: the Version header in content-update-scheduler.php.
+#
+# Push to master: publishes only when tag v<version> does not exist.
+# Manual run: always builds the ZIP as an Actions artifact; set "publish" to
+# create the Release for the current version when its tag is still missing.
+
 on:
   push:
     branches:
       - master
-    paths:
-      - content-update-scheduler.php
-      - options.php
-      - uninstall.php
-      - readme.txt
-      - README.md
-      - LICENSE
-      - assets/**
-      - images/**
-      - includes/**
-      - tests/**
-      - .github/workflows/package-plugin.yml
+  workflow_dispatch:
+    inputs:
+      publish:
+        description: Create the GitHub Release for the current version if tag v<version> does not exist
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -26,164 +28,90 @@ concurrency:
 
 jobs:
   package:
-    name: Build release zip
+    name: Build release ZIP
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v6
-        with:
-          fetch-depth: 0
 
-      - name: Elementor revision copy regression
-        shell: bash
-        run: |
-          set -euo pipefail
-          npx --yes @wp-playground/cli@3.1.55 run-blueprint \
-            --verbosity=quiet \
-            --php=8.3 \
-            --wp=latest \
-            --blueprint=tests/elementor-revision-blueprint.json \
-            --mount=.:/wordpress/wp-content/plugins/content-update-scheduler \
-            --mount=./tests:/wordpress/wp-content/cus-repro
-
-      - name: Detect version update
+      - name: Read version and check tag
         id: version
         shell: bash
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          PUBLISH_INPUT: ${{ inputs.publish }}
         run: |
           set -euo pipefail
-
-          plugin_file="content-update-scheduler.php"
-          current_version="$(grep -E '^[[:space:]]*\*[[:space:]]*Version:' "$plugin_file" | head -1 | sed -E 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*//')"
-          previous_version=""
-
-          if [[ -z "$current_version" ]]; then
-            echo "Could not find plugin Version header in ${plugin_file}" >&2
-            exit 1
-          fi
-
-          if git cat-file -e "${{ github.event.before }}:${plugin_file}" 2>/dev/null; then
-            previous_version="$(git show "${{ github.event.before }}:${plugin_file}" | grep -E '^[[:space:]]*\*[[:space:]]*Version:' | head -1 | sed -E 's/^[[:space:]]*\*[[:space:]]*Version:[[:space:]]*//' || true)"
-          fi
-
-          {
-            echo "current=$current_version"
-            echo "previous=$previous_version"
-          } >> "$GITHUB_OUTPUT"
-
-          if [[ "$current_version" != "$previous_version" ]]; then
-            echo "changed=true" >> "$GITHUB_OUTPUT"
+          version="$(python3 -I .github/scripts/build-plugin-zip.py version --main content-update-scheduler.php --constant CUS_VERSION)"
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if git ls-remote --exit-code --tags origin "refs/tags/v${version}" >/dev/null 2>&1; then
+            tag_exists=true
           else
-            echo "changed=false" >> "$GITHUB_OUTPUT"
+            tag_exists=false
           fi
-
-      - name: Validate PHP syntax
-        if: steps.version.outputs.changed == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          while IFS= read -r -d '' file; do
-            php -l "$file"
-          done < <(find . -path './.git' -prune -o -type f -name '*.php' -print0)
-
-      - name: Validate package file list
-        if: steps.version.outputs.changed == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-          required_files=(
-            content-update-scheduler.php
-            options.php
-            uninstall.php
-            readme.txt
-            README.md
-            LICENSE
-            includes/class-content-update-scheduler.php
-            includes/Plugin.php
-            includes/Admin/ScheduledRepublicationsPage.php
-            includes/Admin/ScheduledRepublicationsTable.php
-            includes/Support/AdminNotices.php
-            includes/Support/Cron.php
-            assets/admin.css
-            assets/homepage-scheduler.js
-            assets/metabox.css
-            assets/metabox.js
-          )
-
-          for file in "${required_files[@]}"; do
-            if [[ ! -f "$file" ]]; then
-              echo "Required package file is missing: $file" >&2
-              exit 1
-            fi
-          done
-
-      - name: Build plugin zip
-        id: package
-        if: steps.version.outputs.changed == 'true'
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          plugin_slug="content-update-scheduler"
-          version="${{ steps.version.outputs.current }}"
-          zip_name="${plugin_slug}-${version}.zip"
-
-          mkdir -p dist
-          git archive \
-            --format=zip \
-            --prefix="${plugin_slug}/" \
-            --output="dist/${zip_name}" \
-            HEAD \
-            LICENSE \
-            README.md \
-            readme.txt \
-            content-update-scheduler.php \
-            options.php \
-            uninstall.php \
-            assets \
-            images \
-            includes
-
-          sha256sum "dist/${zip_name}" | tee "dist/${zip_name}.sha256"
-
+          build=false
+          publish=false
+          if [ "$EVENT_NAME" = "workflow_dispatch" ]; then
+            build=true
+            if [ "$PUBLISH_INPUT" = "true" ] && [ "$tag_exists" = "false" ]; then publish=true; fi
+          elif [ "$tag_exists" = "false" ]; then
+            build=true
+            publish=true
+          fi
           {
-            echo "zip_path=dist/${zip_name}"
-            echo "checksum_path=dist/${zip_name}.sha256"
-            echo "tag_name=v${version}"
-            echo "release_name=Content Update Scheduler ${version}"
+            echo "tag_exists=$tag_exists"
+            echo "build=$build"
+            echo "publish=$publish"
           } >> "$GITHUB_OUTPUT"
+          echo "version=$version tag_exists=$tag_exists build=$build publish=$publish"
+
+      - name: Build and verify ZIP
+        if: steps.version.outputs.build == 'true'
+        id: package
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -I .github/scripts/build-plugin-zip.py build \
+            --slug content-update-scheduler \
+            --main content-update-scheduler.php --constant CUS_VERSION \
+            --include LICENSE \
+            --include README.md \
+            --include readme.txt \
+            --include content-update-scheduler.php \
+            --include options.php \
+            --include uninstall.php \
+            --include assets \
+            --include images \
+            --include includes \
+            --out dist
+          test "$(python3 -I .github/scripts/build-plugin-zip.py version --main content-update-scheduler.php)" = "${{ steps.version.outputs.version }}"
 
       - name: Upload workflow artifact
-        if: steps.version.outputs.changed == 'true'
+        if: steps.version.outputs.build == 'true'
         uses: actions/upload-artifact@v7
         with:
-          name: content-update-scheduler-${{ steps.version.outputs.current }}
+          name: content-update-scheduler-${{ steps.version.outputs.version }}
           path: |
-            ${{ steps.package.outputs.zip_path }}
-            ${{ steps.package.outputs.checksum_path }}
+            dist/content-update-scheduler-${{ steps.version.outputs.version }}.zip
+            dist/content-update-scheduler.zip
           if-no-files-found: error
 
-      - name: Create or update GitHub release
-        if: steps.version.outputs.changed == 'true'
+      - name: Create GitHub Release
+        if: steps.version.outputs.publish == 'true'
+        shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
-          TAG_NAME: ${{ steps.package.outputs.tag_name }}
-          RELEASE_NAME: ${{ steps.package.outputs.release_name }}
-          ZIP_PATH: ${{ steps.package.outputs.zip_path }}
-          CHECKSUM_PATH: ${{ steps.package.outputs.checksum_path }}
-        shell: bash
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
+          gh release create "v${VERSION}" \
+            "dist/content-update-scheduler-${VERSION}.zip" \
+            "dist/content-update-scheduler.zip" \
+            --target "$GITHUB_SHA" \
+            --title "Content Update Scheduler ${VERSION}" \
+            --notes "Installable WordPress ZIP for Content Update Scheduler ${VERSION} built from ${GITHUB_SHA}. Upload the ZIP under Plugins, Add New, Upload Plugin."
 
-          if gh release view "$TAG_NAME" >/dev/null 2>&1; then
-            gh release upload "$TAG_NAME" "$ZIP_PATH" "$CHECKSUM_PATH" --clobber
-          else
-            gh release create "$TAG_NAME" "$ZIP_PATH" "$CHECKSUM_PATH" \
-              --title "$RELEASE_NAME" \
-              --target "$GITHUB_SHA" \
-              --notes "Automated WordPress plugin package for ${RELEASE_NAME}."
-          fi
-
-      - name: Report unchanged version
-        if: steps.version.outputs.changed != 'true'
-        run: echo "Plugin version did not change; no release package was created."
+      - name: Report skipped release
+        if: steps.version.outputs.publish != 'true'
+        run: echo "No Release created (tag v${{ steps.version.outputs.version }} exists or manual run without publish)."
